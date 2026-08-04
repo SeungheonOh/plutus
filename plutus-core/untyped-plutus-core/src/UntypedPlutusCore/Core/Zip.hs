@@ -66,6 +66,10 @@ tzipWith f term1 term2 = do
     go (Constr a1 i1 ts1) (Constr a2 _i2 ts2) = Constr (f a1 a2) i1 <$> zipExactWithM go ts1 ts2
     go (Case a1 t1 vs1) (Case a2 t2 vs2) =
       Case (f a1 a2) <$> go t1 t2 <*> (fromList <$> zipExactWithM go (toList vs1) (toList vs2))
+    go (Match a1 t1 as1) (Match a2 t2 as2) =
+      Match (f a1 a2)
+        <$> go t1 t2
+        <*> (fromList <$> zipExactWithM goAlternative (toList as1) (toList as2))
     go _ _ =
       throwError "zip: This should not happen, because we prior established term equality."
 
@@ -73,6 +77,10 @@ tzipWith f term1 term2 = do
     zipExactWithM g (a : as) (b : bs) = (:) <$> g a b <*> zipExactWithM g as bs
     zipExactWithM _ [] [] = pure []
     zipExactWithM _ _ _ = throwError "zipExactWithM: not exact"
+
+    goAlternative (pat, handler1) (_, handler2) = do
+      handler <- go handler1 handler2
+      pure (pat, handler)
 
 -- | Zip 2 programs by pairing their annotations
 pzip

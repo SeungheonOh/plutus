@@ -1,19 +1,23 @@
-cabal-version: 3.0
-name:          plutus-benchmark
-version:       0.1.0.0
-license:       Apache-2.0
+cabal-version:      3.0
+name:               plutus-benchmark
+version:            0.1.0.0
+license:            Apache-2.0
 license-files:
   LICENSE
   NOTICE
 
-maintainer:    michael.peyton-jones@iohk.io
-author:        Plutus Core Team
-homepage:      https://github.com/IntersectMBO/plutus
-bug-reports:   https://github.com/IntersectMBO/plutus/issues
+maintainer:         michael.peyton-jones@iohk.io
+author:             Plutus Core Team
+homepage:           https://github.com/IntersectMBO/plutus
+bug-reports:        https://github.com/IntersectMBO/plutus/issues
 description:
   Please see the README on GitHub at <https://github.com/IntersectMBO/plutus#readme>
 
-build-type:    Simple
+build-type:         Simple
+extra-source-files:
+  matching/costing/analyse.py
+  matching/costing/README.md
+
 data-files:
   certifier/data/*.uplc
   common/templates/*.tpl
@@ -280,6 +284,44 @@ benchmark casing
     , criterion                >=1.5.9.0
     , plutus-benchmark-common
     , plutus-ledger-api        ^>=1.66
+
+---------------- matching ----------------
+
+library matching-internal
+  import:          lang, ghc-version-support, os-support
+  hs-source-dirs:  matching/src
+  exposed-modules: PlutusBenchmark.Matching.Costing
+  build-depends:
+    , base         >=4.9   && <5
+    , bytestring
+    , plutus-core  ^>=1.66
+    , vector
+
+benchmark matching-costing
+  import:         lang, ghc-version-support, os-support
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: matching/costing
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N1
+  build-depends:
+    , base               >=4.9     && <5
+    , criterion          >=1.5.9.0
+    , deepseq
+    , matching-internal
+    , plutus-core        ^>=1.66
+
+benchmark matching-comparison
+  import:         lang, ghc-version-support, os-support
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: matching/comparison
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N1
+  build-depends:
+    , base         >=4.9     && <5
+    , criterion    >=1.5.9.0
+    , deepseq
+    , plutus-core  ^>=1.66
+    , vector
 
 ---------------- data ----------------
 

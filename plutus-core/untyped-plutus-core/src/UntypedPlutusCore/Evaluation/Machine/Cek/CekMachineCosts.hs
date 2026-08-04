@@ -48,6 +48,11 @@ data CekMachineCostsBase f
   happen if calling 'Error' caused the budget to be exceeded? -}
   , cekConstrCost :: f ExBudget
   , cekCaseCost :: f ExBudget
+  , cekMatchCost :: f ExBudget
+  -- ^ Fixed cost of entering Match and performing its first bounded root probe.
+  , cekMatchWorkCost :: f ExBudget
+  {-^ Conservative variable-work quantum for additional alternatives, requested immediate fields,
+  captures, and fixed-size chunks of scalar payload comparison. -}
   }
   deriving stock (Generic)
   deriving anyclass (FunctorB, TraversableB, ConstraintsB)
@@ -96,6 +101,8 @@ unitCekMachineCosts =
     , cekBuiltinCost = unitCost
     , cekConstrCost = unitCost
     , cekCaseCost = unitCost
+    , cekMatchCost = unitCost
+    , cekMatchWorkCost = unitCost
     }
   where
     zeroCost = Identity $ ExBudget 0 0

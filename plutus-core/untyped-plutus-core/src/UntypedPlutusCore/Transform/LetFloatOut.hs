@@ -6,7 +6,7 @@ cannot cause any expression to be evaluated more than before.
 
 This can unlock further optimizations, such as case-constr and force-delay cancellation.
 
-Specifically, it floats bindings from the following positions: @case@ scrutinee,
+Specifically, it floats bindings from the following positions: @case@ or @match@ scrutinee,
 @force@ body, and the function of @apply@.
 
 If we don't care about the order of effects, we can also float bindings from @apply@
@@ -44,6 +44,8 @@ processTerm :: Term name uni fun a -> Term name uni fun a
 processTerm = \case
   Case ca (Apply aa (LamAbs la x body) rhs) branches ->
     Apply aa (LamAbs la x (Case ca body branches)) rhs
+  Match ma (Apply aa (LamAbs la x body) rhs) alternatives ->
+    Apply aa (LamAbs la x (Match ma body alternatives)) rhs
   Force fa (Apply aa (LamAbs la x body) rhs) ->
     Apply aa (LamAbs la x (Force fa body)) rhs
   Apply aa (Apply aa' (LamAbs la x body) rhs) arg ->

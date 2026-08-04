@@ -22,7 +22,8 @@ import PlutusTx.Code
 
 type family CompiledCodeFuncToHaskType t r where
   CompiledCodeFuncToHaskType (CompiledCodeIn uni fun (a -> b)) r =
-    CompiledCodeIn uni fun a -> CompiledCodeFuncToHaskType (CompiledCodeIn uni fun b) r
+    CompiledCodeIn uni fun a
+    -> CompiledCodeFuncToHaskType (CompiledCodeIn uni fun b) r
   CompiledCodeFuncToHaskType (CompiledCodeIn uni fun a) r = r
 
 type family FinalType t where
@@ -40,12 +41,15 @@ instance
   ( PLC.Everywhere uni Flat
   , PLC.Everywhere uni PrettyConst
   , PLC.Closed uni
+  , Flat (PLC.BuiltinPattern uni)
   , Flat fun
   , Pretty fun
   , PrettyBy RenderContext (PLC.SomeTypeIn uni)
   , CompiledCodeFuncToHask b r uni fun
   , CompiledCodeFuncToHaskType (CompiledCodeIn uni fun (a -> b)) r
-      ~ (CompiledCodeIn uni fun a -> CompiledCodeFuncToHaskType (CompiledCodeIn uni fun b) r)
+      ~ ( CompiledCodeIn uni fun a
+          -> CompiledCodeFuncToHaskType (CompiledCodeIn uni fun b) r
+        )
   )
   => CompiledCodeFuncToHask (a -> b) r uni fun
   where
@@ -71,7 +75,11 @@ applyCodeN foo bar baz :: Either String (CompiledCode Bool)
 ``` -}
 applyCodeN
   :: forall uni fun a
-   . CompiledCodeFuncToHask a (Either String (CompiledCodeIn uni fun (FinalType a))) uni fun
+   . CompiledCodeFuncToHask
+       a
+       (Either String (CompiledCodeIn uni fun (FinalType a)))
+       uni
+       fun
   => CompiledCodeIn uni fun a
   -> CompiledCodeFuncToHaskType
        (CompiledCodeIn uni fun a)
@@ -86,9 +94,15 @@ applyCodeN =
 -- | Same as 'applyCodeN' but is partial instead of returning `Either String`.
 unsafeApplyCodeN
   :: forall uni fun a
-   . CompiledCodeFuncToHask a (CompiledCodeIn uni fun (FinalType a)) uni fun
+   . CompiledCodeFuncToHask
+       a
+       (CompiledCodeIn uni fun (FinalType a))
+       uni
+       fun
   => CompiledCodeIn uni fun a
-  -> CompiledCodeFuncToHaskType (CompiledCodeIn uni fun a) (CompiledCodeIn uni fun (FinalType a))
+  -> CompiledCodeFuncToHaskType
+       (CompiledCodeIn uni fun a)
+       (CompiledCodeIn uni fun (FinalType a))
 unsafeApplyCodeN =
   applyCodeN'
     @a

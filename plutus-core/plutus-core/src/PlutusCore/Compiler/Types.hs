@@ -15,8 +15,11 @@ type Compiling m uni fun name a =
   , GEq uni
   , Closed uni
   , Everywhere uni Eq
+  , Eq (BuiltinPattern uni)
   , HasUnique name TermUnique
   , Ord name
   , Typeable name
   , Hashable fun
+  , Hashable
+      (BuiltinPattern uni)
   )

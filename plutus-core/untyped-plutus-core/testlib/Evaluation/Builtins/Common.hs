@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Evaluation.Builtins.Common
@@ -63,6 +64,7 @@ typecheckAnd
      , TPLC.Typecheckable uni fun
      , GEq uni
      , CaseBuiltin uni
+     , MatchBuiltin uni
      , Closed uni
      , uni `Everywhere` ExMemoryUsage
      )
@@ -82,7 +84,7 @@ typecheckAnd semvar action costingPart term = TPLC.runQuoteT $ do
   return . action runtime $ TPLC.eraseTerm term
   where
     runtime =
-      MachineParameters def . mkMachineVariantParameters semvar $
+      MachineParameters def def . mkMachineVariantParameters semvar $
         -- FIXME: make sure we have the the correct cost model for the semantics variant.
         CostModel defaultCekMachineCostsForTesting costingPart
 
@@ -94,7 +96,9 @@ typecheckEvaluateCek
      , uni `Everywhere` ExMemoryUsage
      , PrettyUni uni
      , Pretty fun
+     , Pretty (BuiltinPattern uni)
      , CaseBuiltin uni
+     , MatchBuiltin uni
      )
   => BuiltinSemanticsVariant fun
   -> CostingPart uni fun
@@ -112,7 +116,9 @@ typecheckEvaluateCekNoEmit
      , uni `Everywhere` ExMemoryUsage
      , PrettyUni uni
      , Pretty fun
+     , Pretty (BuiltinPattern uni)
      , CaseBuiltin uni
+     , MatchBuiltin uni
      )
   => BuiltinSemanticsVariant fun
   -> CostingPart uni fun
@@ -130,7 +136,9 @@ typecheckReadKnownCek
      , uni `Everywhere` ExMemoryUsage
      , PrettyUni uni
      , Pretty fun
+     , Pretty (BuiltinPattern uni)
      , CaseBuiltin uni
+     , MatchBuiltin uni
      , ReadKnown (UPLC.Term Name uni fun ()) a
      )
   => BuiltinSemanticsVariant fun

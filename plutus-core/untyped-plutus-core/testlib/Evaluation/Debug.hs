@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -41,7 +42,12 @@ newtype EmptyAnn = EmptyAnn ()
 instance Breakpointable EmptyAnn Breakpoints where
   hasBreakpoints _ = absurd
 
-examples :: [(String, [Cmd Breakpoints], NTerm DefaultUni DefaultFun EmptyAnn)]
+examples
+  :: [ ( String
+       , [Cmd Breakpoints]
+       , NTerm DefaultUni DefaultFun EmptyAnn
+       )
+     ]
 examples =
   [ ("ex1", repeat Step, Delay mempty $ Error mempty)
   , ("ex2", replicate 4 Step, Force mempty $ Delay mempty $ Error mempty)
@@ -49,7 +55,12 @@ examples =
   , ("ex4", repeat Step, Error mempty)
   ]
 
-goldenVsDebug :: (TestName, [Cmd Breakpoints], NTerm DefaultUni DefaultFun EmptyAnn) -> TestTree
+goldenVsDebug
+  :: ( TestName
+     , [Cmd Breakpoints]
+     , NTerm DefaultUni DefaultFun EmptyAnn
+     )
+  -> TestTree
 goldenVsDebug (name, cmds, term) =
   goldenVsString
     name
@@ -86,6 +97,7 @@ mock cmds t = runST $ unCekM $ do
 handle
   :: forall uni fun s m
    . ( ThrowableBuiltins uni fun
+     , Pretty (BuiltinPattern uni)
      , MonadWriter [String] m
      , MonadReader [Cmd Breakpoints] m
      , PrimMonad m

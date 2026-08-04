@@ -32,6 +32,8 @@ renameTermM (Delay ann term) = Delay ann <$> renameTermM term
 renameTermM (Force ann term) = Force ann <$> renameTermM term
 renameTermM (Constr ann i es) = Constr ann i <$> traverse renameTermM es
 renameTermM (Case ann arg cs) = Case ann <$> renameTermM arg <*> traverse renameTermM cs
+renameTermM (Match ann arg alternatives) =
+  Match ann <$> renameTermM arg <*> traverse (traverse renameTermM) alternatives
 renameTermM con@Constant {} = pure con
 renameTermM bi@Builtin {} = pure bi
 

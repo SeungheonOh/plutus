@@ -7,6 +7,7 @@ import PlutusConformance.Common
   ( EvaluationResult (..)
   , UplcEvaluator (..)
   )
+import PlutusCore.Builtin qualified as PLC
 import PlutusCore.Default
   ( DefaultFun
   , DefaultUni
@@ -35,10 +36,15 @@ this type (the latter's haddock says it "provides the same interface to the
 original CEK machine") so this is shared between the `haskell-conformance` and
 `haskell-steppable-conformance` test suites rather than being duplicated. -}
 mkCekEvaluator
-  :: ( UPLC.MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ())
+  :: ( UPLC.MachineParameters
+         CekMachineCosts
+         DefaultFun
+         (CekValue DefaultUni DefaultFun ())
        -> ExBudgetMode CountingSt DefaultUni DefaultFun
        -> UPLC.Term Name DefaultUni DefaultFun ()
-       -> ( Either (CekEvaluationException Name DefaultUni DefaultFun) (UPLC.Term Name DefaultUni DefaultFun ())
+       -> ( Either
+              (CekEvaluationException Name DefaultUni DefaultFun)
+              (UPLC.Term Name DefaultUni DefaultFun ())
           , CountingSt
           )
      )
@@ -50,7 +56,7 @@ mkCekEvaluator runCekNoEmit = UplcEvaluatorWithCosting $ \modelParams (UPLC.Prog
       case lookup def machParamsList of
         Nothing -> BadMachineParameters
         Just p ->
-          let params = UPLC.MachineParameters def p
+          let params = UPLC.MachineParameters def PLC.availableMatcherBuiltin p
            in -- runCek-like functions (e.g. evaluateCekNoEmit) are partial on term's with
               -- free variables, that is why we manually check first for any free vars
               case UPLC.deBruijnTerm t of

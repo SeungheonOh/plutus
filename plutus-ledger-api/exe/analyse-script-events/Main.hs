@@ -317,12 +317,14 @@ analyseTermDataObjects = go
         Error _ -> pure ()
         UPLC.Constr _ _ ts -> mapM_ go ts
         Case _ t1 t2 -> go t1 >> mapM_ go t2
+        Match _ scrutinee alternatives -> go scrutinee >> mapM_ (go . snd) alternatives
 
 -- Counting builtins
 
 type BuiltinCounts = P.MutablePrimArray (PrimState IO) Int
 
-countBuiltinsInTerm :: BuiltinCounts -> Term NamedDeBruijn DefaultUni DefaultFun () -> IO ()
+countBuiltinsInTerm
+  :: BuiltinCounts -> Term NamedDeBruijn DefaultUni DefaultFun () -> IO ()
 countBuiltinsInTerm counts = go
   where
     go = \case
@@ -336,6 +338,7 @@ countBuiltinsInTerm counts = go
       Error _ -> pure ()
       UPLC.Constr _ _ ts -> mapM_ go ts
       Case _ t1 t2 -> go t1 >> mapM_ go t2
+      Match _ scrutinee alternatives -> go scrutinee >> mapM_ (go . snd) alternatives
     incrCount i = do
       c <- P.readPrimArray counts i
       P.writePrimArray counts i (c + 1)
@@ -439,7 +442,8 @@ analyseCosts ctx _ ev =
       (fromSatInt cpu, fromSatInt mem)
 
 -- Extract the script from an evaluation event and apply some analysis function
-analyseUnappliedScript :: (Term NamedDeBruijn DefaultUni DefaultFun () -> IO ()) -> EventAnalyser
+analyseUnappliedScript
+  :: (Term NamedDeBruijn DefaultUni DefaultFun () -> IO ()) -> EventAnalyser
 analyseUnappliedScript
   analyse
   _ctx

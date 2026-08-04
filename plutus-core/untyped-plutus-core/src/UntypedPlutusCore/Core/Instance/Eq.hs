@@ -22,7 +22,7 @@ import Data.Hashable
 import Data.Vector qualified as V
 
 instance
-  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq ann)
+  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq (BuiltinPattern uni), Eq ann)
   => Eq (Term Name uni fun ann)
   where
   term1 == term2 = runEqRename $ eqTermM term1 term2
@@ -34,6 +34,7 @@ type HashableTermConstraints uni fun ann =
   , uni `Everywhere` Hashable
   , Hashable ann
   , Hashable fun
+  , Hashable (BuiltinPattern uni)
   )
 
 -- This instance is the only logical one, and exists also in the package `vector-instances`.
@@ -49,19 +50,19 @@ instance HashableTermConstraints uni fun ann => Hashable (Term Name uni fun ann)
 -- c) We do not do equality ""modulo annotations".
 -- If a user wants to ignore annotations he must prior do `void <$> term`, to throw away any annotations.
 deriving stock instance
-  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq ann)
+  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq (BuiltinPattern uni), Eq ann)
   => Eq (Term NamedDeBruijn uni fun ann)
 
 instance HashableTermConstraints uni fun ann => Hashable (Term NamedDeBruijn uni fun ann)
 
 deriving stock instance
-  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq ann)
+  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq (BuiltinPattern uni), Eq ann)
   => Eq (Term FakeNamedDeBruijn uni fun ann)
 
 instance HashableTermConstraints uni fun ann => Hashable (Term FakeNamedDeBruijn uni fun ann)
 
 deriving stock instance
-  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq ann)
+  (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq (BuiltinPattern uni), Eq ann)
   => Eq (Term DeBruijn uni fun ann)
 
 instance HashableTermConstraints uni fun ann => Hashable (Term DeBruijn uni fun ann)
@@ -71,6 +72,7 @@ deriving stock instance
   , Closed uni
   , uni `Everywhere` Eq
   , Eq fun
+  , Eq (BuiltinPattern uni)
   , Eq ann
   , Eq (Term name uni fun ann)
   )
@@ -78,7 +80,14 @@ deriving stock instance
 
 -- | Check equality of two 'Term's.
 eqTermM
-  :: (GEq uni, Closed uni, uni `Everywhere` Eq, Eq fun, Eq ann, HasUnique name TermUnique)
+  :: ( GEq uni
+     , Closed uni
+     , uni `Everywhere` Eq
+     , Eq fun
+     , Eq (BuiltinPattern uni)
+     , Eq ann
+     , HasUnique name TermUnique
+     )
   => Term name uni fun ann -> Term name uni fun ann -> EqRename (Renaming TermUnique)
 eqTermM (Constant ann1 con1) (Constant ann2 con2) = do
   eqM ann1 ann2
@@ -115,6 +124,14 @@ eqTermM (Case ann1 a1 cs1) (Case ann2 a2 cs2) = do
   case zipExact (toList cs1) (toList cs2) of
     Just ps -> for_ ps $ \(t1, t2) -> eqTermM t1 t2
     Nothing -> empty
+eqTermM (Match ann1 a1 alternatives1) (Match ann2 a2 alternatives2) = do
+  eqM ann1 ann2
+  eqTermM a1 a2
+  case zipExact (toList alternatives1) (toList alternatives2) of
+    Just pairs -> for_ pairs $ \((pat1, handler1), (pat2, handler2)) -> do
+      eqM pat1 pat2
+      eqTermM handler1 handler2
+    Nothing -> empty
 eqTermM Constant {} _ = empty
 eqTermM Builtin {} _ = empty
 eqTermM Var {} _ = empty
@@ -125,3 +142,4 @@ eqTermM Force {} _ = empty
 eqTermM Error {} _ = empty
 eqTermM Constr {} _ = empty
 eqTermM Case {} _ = empty
+eqTermM Match {} _ = empty

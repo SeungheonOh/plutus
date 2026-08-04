@@ -188,35 +188,35 @@ ticks]. -}
 defaultCekParametersA
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 defaultCekParametersA =
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters DefaultFunSemanticsVariantA cekCostModelVariantA
 
 -- See Note [No inlining for MachineParameters]
 defaultCekParametersB
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 defaultCekParametersB =
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters DefaultFunSemanticsVariantB cekCostModelVariantB
 
 -- See Note [No inlining for MachineParameters]
 defaultCekParametersC
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 defaultCekParametersC =
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters DefaultFunSemanticsVariantC cekCostModelVariantC
 
 -- See Note [No inlining for MachineParameters]
 defaultCekParametersD
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 defaultCekParametersD =
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters DefaultFunSemanticsVariantD cekCostModelVariantD
 
 -- See Note [No inlining for MachineParameters]
 defaultCekParametersE
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 defaultCekParametersE =
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters DefaultFunSemanticsVariantE cekCostModelVariantE
 
 {- Note [noinline for saving on ticks]
@@ -433,6 +433,6 @@ unitCekParameters
   :: Typeable ann => MachineParameters CekMachineCosts DefaultFun (CekValue DefaultUni DefaultFun ann)
 unitCekParameters =
   -- See Note [noinline for saving on ticks].
-  MachineParameters def $
+  MachineParameters def def $
     noinline mkMachineVariantParameters def $
       CostModel unitCekMachineCosts unitCostBuiltinCostModel

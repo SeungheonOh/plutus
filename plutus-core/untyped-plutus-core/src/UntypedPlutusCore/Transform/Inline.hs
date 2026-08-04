@@ -489,6 +489,7 @@ isStrictIn name = go
       Error {} -> False
       Constr _ann _idx terms -> any go terms
       Case _ann scrut _branches -> go scrut
+      Match _ann scrut _alternatives -> go scrut
 
 effectSafe
   :: forall name uni fun a b
@@ -544,6 +545,7 @@ costIsAcceptable = \case
       _ -> False
   -- Inlining a case means redoing the match at each use site
   Case {} -> False
+  Match {} -> False
   Force {} -> False
   Delay {} -> True
 
@@ -699,6 +701,8 @@ mkHints = go
           Error {} -> CertifierHints.InlError
           Constr _ _ args -> CertifierHints.InlConstr (go <$> args)
           Case _ scrut alts -> CertifierHints.InlCase (go scrut) (go <$> V.toList alts)
+          Match _ scrut alternatives ->
+            CertifierHints.InlMatch (go scrut) (go . snd <$> V.toList alternatives)
 
 {- Note [Inliner's Certifier Hints]
 

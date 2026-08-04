@@ -194,6 +194,8 @@ instance
   , TPLC.GEq uni
   , TPLC.Closed uni
   , TPLC.Everywhere uni Eq
+  , Eq (BuiltinPattern uni)
+  , Hashable (BuiltinPattern uni)
   )
   => ToUPlc (TPLC.Program TPLC.TyName UPLC.Name uni fun ()) uni fun
   where

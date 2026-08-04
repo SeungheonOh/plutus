@@ -11,6 +11,7 @@ import UntypedPlutusCore.DeBruijn as UPLC
 
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
+import Data.Foldable (traverse_)
 
 {-| A pass to check that the input term:
 1) does not contain free variables and
@@ -52,5 +53,8 @@ checkScope = go 0
       Apply _ t1 t2 -> go lvl t1 >> go lvl t2
       Force _ t -> go lvl t
       Delay _ t -> go lvl t
+      Constr _ _ fields -> traverse_ (go lvl) fields
+      Case _ scrut branches -> go lvl scrut >> traverse_ (go lvl) branches
+      Match _ scrut alternatives -> go lvl scrut >> traverse_ (go lvl . snd) alternatives
       _ -> pure ()
 {-# INLINE checkScope #-}

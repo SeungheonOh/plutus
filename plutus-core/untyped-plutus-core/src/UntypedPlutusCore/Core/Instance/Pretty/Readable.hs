@@ -35,7 +35,12 @@ viewApp term0 = go term0 []
     go fun args = Just (fun, args)
 
 instance
-  (PrettyReadableBy configName name, PrettyUni uni, Pretty fun, Show configName)
+  ( PrettyReadableBy configName name
+  , PrettyUni uni
+  , Pretty fun
+  , Pretty (BuiltinPattern uni)
+  , Show configName
+  )
   => PrettyBy (PrettyConfigReadable configName) (Term name uni fun a)
   where
   prettyBy = inContextM $ \case
@@ -54,6 +59,11 @@ instance
     Constr _ i es -> iterAppDocM $ \_ prettyArg ->
       ("constr" <+> prettyArg i) :| [prettyArg es]
     Case _ arg cs -> iterAppDocM $ \_ prettyArg -> "case" :| [prettyArg arg, prettyArg (toList cs)]
+    Match _ arg alternatives -> iterAppDocM $ \_ prettyArg ->
+      "match" :| (prettyArg arg : fmap (prettyAlternative prettyArg) (toList alternatives))
+      where
+        prettyAlternative prettyArg (pat, handler) =
+          parens $ "pattern" <+> pretty pat <+> prettyArg handler
 
 instance
   PrettyReadableBy configName (Term name uni fun a)

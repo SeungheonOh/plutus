@@ -46,6 +46,7 @@ conv (Delay _ t) = UDelay (conv t)
 conv (Force _ t) = UForce (conv t)
 conv (Constr _ i es) = UConstr (toInteger i) (toList (fmap conv es))
 conv (Case _ arg cs) = UCase (conv arg) (toList (fmap conv cs))
+conv Match {} = error "UPLC 1.2 'match' is not yet supported by the Agda metatheory"
 
 tmname :: Int -> String
 tmname i = 'x' : show i

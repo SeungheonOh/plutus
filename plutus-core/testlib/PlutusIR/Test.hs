@@ -73,6 +73,8 @@ instance
 instance
   ( PLC.GEq uni
   , uni `PLC.Everywhere` Eq
+  , Eq (PLC.BuiltinPattern uni)
+  , Hashable (PLC.BuiltinPattern uni)
   , PLC.Typecheckable uni fun
   , PLC.CaseBuiltin uni
   , PLC.PrettyUni uni

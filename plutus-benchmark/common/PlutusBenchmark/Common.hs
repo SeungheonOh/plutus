@@ -107,7 +107,8 @@ mkEvalCtx ll semvar =
       let errOrCtx =
             LedgerApi.mkDynEvaluationContext
               ll
-              (\_ -> PLC.CaserBuiltin PLC.caseBuiltin)
+              (\_ -> PLC.availableCaserBuiltin)
+              (PLC.unavailableMatcherBuiltin . LedgerApi.getMajorProtocolVersion)
               [semvar]
               (const semvar)
               p

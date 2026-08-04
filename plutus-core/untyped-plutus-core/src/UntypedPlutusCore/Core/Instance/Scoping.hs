@@ -38,6 +38,20 @@ instance name ~ Name => EstablishScoping (Term name uni fun) where
   establishScoping (Constant _ con) = pure $ Constant NotAName con
   establishScoping (Builtin _ bi) = pure $ Builtin NotAName bi
   establishScoping (Constr _ i es) = Constr NotAName <$> pure i <*> traverse establishScoping es
+  establishScoping (Match _ a alternatives) = do
+    alternativesScoped <- for alternatives $ \(pat, handler) -> do
+      handlerScoped <- establishScoping handler
+      pure (pat, handlerScoped)
+    let alternativesScopedPoked =
+          addTheRest . map (\alternative@(_, handler) -> (alternative, firstBound handler)) $
+            Vector.toList alternativesScoped
+        branchBounds = map (snd . fst) alternativesScopedPoked
+        referenceInAlternative (((pat, handler), _), others) =
+          (pat, referenceOutOfScope (map snd others) handler)
+    aScoped <- establishScoping a
+    pure . referenceOutOfScope branchBounds $
+      Match NotAName aScoped . Vector.fromList $
+        map referenceInAlternative alternativesScopedPoked
   establishScoping (Case _ a es) = do
     esScoped <- traverse establishScoping es
     let esScopedPoked = addTheRest . map (\e -> (e, firstBound e)) $ Vector.toList esScoped
@@ -65,6 +79,8 @@ instance name ~ Name => CollectScopeInfo (Term name uni fun) where
   collectScopeInfo (Builtin _ _) = mempty
   collectScopeInfo (Constr _ _ es) = foldMap collectScopeInfo es
   collectScopeInfo (Case _ arg cs) = collectScopeInfo arg <> foldMap collectScopeInfo cs
+  collectScopeInfo (Match _ arg alternatives) =
+    collectScopeInfo arg <> foldMap (collectScopeInfo . snd) alternatives
 
 instance name ~ Name => CollectScopeInfo (Program name uni fun) where
   collectScopeInfo (Program _ _ term) = collectScopeInfo term

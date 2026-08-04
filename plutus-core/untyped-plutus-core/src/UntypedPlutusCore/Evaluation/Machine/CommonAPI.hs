@@ -138,7 +138,7 @@ runCekNoEmit runner params mode =
 {-| Evaluate a term using a machine with logging enabled.
 *THIS FUNCTION IS PARTIAL if the input term contains free variables* -}
 evaluateCek
-  :: ThrowableBuiltins uni fun
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni))
   => MachineRunner RestrictingSt uni fun ann
   -> EmitterMode uni fun
   -> MachineParameters CekMachineCosts fun (CekValue uni fun ann)
@@ -152,7 +152,7 @@ evaluateCek runner emitMode params =
 {-| Evaluate a term using a machine with logging disabled.
 *THIS FUNCTION IS PARTIAL if the input term contains free variables* -}
 evaluateCekNoEmit
-  :: ThrowableBuiltins uni fun
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni))
   => MachineRunner RestrictingSt uni fun ann
   -> MachineParameters CekMachineCosts fun (CekValue uni fun ann)
   -> Term Name uni fun ann
@@ -162,7 +162,7 @@ evaluateCekNoEmit runner params = fst . runCekNoEmit runner params restrictingEn
 {-| Unlift a value using a machine.
 *THIS FUNCTION IS PARTIAL if the input term contains free variables* -}
 readKnownCek
-  :: (ThrowableBuiltins uni fun, ReadKnown (Term Name uni fun ()) a)
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni), ReadKnown (Term Name uni fun ()) a)
   => MachineRunner RestrictingSt uni fun ann
   -> MachineParameters CekMachineCosts fun (CekValue uni fun ann)
   -> Term Name uni fun ann

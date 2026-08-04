@@ -43,7 +43,8 @@ mkDefaultEvalCtx semvar =
       either (error . show) id $
         mkDynEvaluationContext
           PlutusV3
-          (\_ -> PLC.CaserBuiltin PLC.caseBuiltin)
+          (\_ -> PLC.availableCaserBuiltin)
+          (\_ -> PLC.availableMatcherBuiltin)
           [semvar]
           (const semvar)
           p
@@ -66,7 +67,8 @@ evalOptimizerTrace evalCtx trace args =
   first (either Just (const Nothing)) . evalCounting evalCtx newestPV
     <$> appliedTerms
   where
-    appliedTerms :: [UPLC.Term UPLC.NamedDeBruijn UPLC.DefaultUni UPLC.DefaultFun ()]
+    appliedTerms
+      :: [UPLC.Term UPLC.NamedDeBruijn UPLC.DefaultUni UPLC.DefaultFun ()]
     appliedTerms =
       ( \ast ->
           F.foldl'

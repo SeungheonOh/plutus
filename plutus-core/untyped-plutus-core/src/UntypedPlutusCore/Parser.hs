@@ -20,7 +20,7 @@ import Control.Monad.Except
 import PlutusCore qualified as PLC
 import PlutusCore.Annotation
 import PlutusCore.Error qualified as PLC
-import PlutusPrelude ((&&&), getAnn, setAnn, through)
+import PlutusPrelude (getAnn, setAnn, through, (&&&))
 import Text.Megaparsec hiding (ParseError, State, parse)
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer qualified as Lex
@@ -28,6 +28,7 @@ import UntypedPlutusCore.Check.Uniques (checkProgram)
 import UntypedPlutusCore.Core.Type qualified as UPLC
 import UntypedPlutusCore.Rename (Rename (rename))
 
+import Data.Int (Int64)
 import Data.Text (Text)
 import Data.Vector qualified as V
 import Data.Word (Word64)
@@ -38,7 +39,8 @@ import PlutusCore.Version
 -- Parsers for UPLC terms
 
 -- | A parsable UPLC term.
-type PTerm = UPLC.Term PLC.Name PLC.DefaultUni PLC.DefaultFun SrcSpan
+type PTerm =
+  UPLC.Term PLC.Name PLC.DefaultUni PLC.DefaultFun SrcSpan
 
 conTerm :: SrcSpan -> Parser PTerm
 conTerm sp =
@@ -58,8 +60,8 @@ lamTerm sp =
 
 appTerm :: SrcSpan -> Parser PTerm
 appTerm sp =
-  setAnn sp <$>
-    (mkIterApp <$> term <*> (fmap (getAnn &&& id) <$> some term))
+  setAnn sp
+    <$> (mkIterApp <$> term <*> (fmap (getAnn &&& id) <$> some term))
 
 delayTerm :: SrcSpan -> Parser PTerm
 delayTerm sp =
@@ -87,6 +89,70 @@ caseTerm sp = do
   res <- UPLC.Case sp <$> term <*> (V.fromList <$> many term)
   whenVersion (\v -> v < plcVersion110) $ fail "'case' is not allowed before version 1.1.0"
   pure res
+
+matchPattern :: Parser PLC.DefaultBuiltinPattern
+matchPattern =
+  leadingWhitespace . inParens . choice . fmap try $
+    [ PLC.DefaultPatternWildcard <$ symbol "wildcard"
+    , PLC.DefaultPatternCapture <$ symbol "bind"
+    , PLC.DefaultPatternInteger <$> (symbol "integer" *> patternInt64)
+    , PLC.DefaultPatternByteString <$> (symbol "bytestring" *> conBS)
+    , PLC.DefaultPatternBool <$> (symbol "bool" *> conBool)
+    , PLC.DefaultPatternUnit <$ symbol "unit"
+    , withChildren PLC.DefaultPatternList "list"
+    , PLC.DefaultPatternPair
+        <$> (symbol "pair" *> matchPatternField)
+        <*> matchPatternField
+    , do
+        tag <- symbol "data-constr" *> patternWord64
+        patternFields $ PLC.DefaultPatternDataConstr tag
+    , withChildren PLC.DefaultPatternDataMap "data-map"
+    , withChildren PLC.DefaultPatternDataList "data-list"
+    , PLC.DefaultPatternDataI <$> (symbol "data-i" *> matchPatternField)
+    , PLC.DefaultPatternDataB <$> (symbol "data-b" *> matchPatternField)
+    ]
+  where
+    patternInt64 = do
+      value <- conInteger
+      let lower = toInteger (minBound :: Int64)
+          upper = toInteger (maxBound :: Int64)
+      when (value < lower || value > upper) $
+        fail "integer pattern is outside the Int64 range"
+      pure $ fromInteger value
+    patternWord64 = do
+      value <- conInteger
+      when (value < 0 || value > toInteger (maxBound :: Word64)) $
+        fail "data-constr pattern tag is outside the Word64 range"
+      pure $ fromInteger value
+    withChildren ctor keyword = symbol keyword *> patternFields ctor
+    patternFields = directFields
+    directFields ctor = do
+      fields <- many $ try matchPatternField
+      fieldEnd <-
+        PLC.DefaultPatternFieldsRest
+          <$ try restPattern
+            <|> pure PLC.DefaultPatternFieldsExact
+      pure . ctor fieldEnd $ V.fromList fields
+    restPattern = leadingWhitespace . inParens $ symbol "rest"
+
+matchPatternField :: Parser PLC.DefaultPatternField
+matchPatternField =
+  leadingWhitespace . inParens $
+    choice
+      [ PLC.DefaultPatternFieldWildcard <$ symbol "wildcard"
+      , PLC.DefaultPatternFieldBind <$ symbol "bind"
+      ]
+
+matchTerm :: SrcSpan -> Parser PTerm
+matchTerm sp = do
+  scrutinee <- term
+  alternatives <- V.fromList <$> many patternAlternative
+  whenVersion (\v -> v < plcVersion120) $ fail "'match' is not allowed before version 1.2.0"
+  pure $ UPLC.Match sp scrutinee alternatives
+  where
+    patternAlternative = leadingWhitespace . trailingWhitespace . inParens $ do
+      _ <- symbol "pattern"
+      (,) <$> matchPattern <*> term
 
 -- | Parser for all UPLC terms.
 term :: Parser PTerm
@@ -121,12 +187,20 @@ term =
               , symbol "force" *> forceTerm sp
               , symbol "error" *> errorTerm sp
               , symbol "case" *> caseTerm sp
+              , symbol "match" *> matchTerm sp
               ]
-              <?> "term keyword (builtin, lam, constr, con, delay, force, error, case)"
+              <?> "term keyword (builtin, lam, constr, con, delay, force, error, case, match)"
           )
 
 -- | Parser for UPLC programs.
-program :: Parser (UPLC.Program PLC.Name PLC.DefaultUni PLC.DefaultFun SrcSpan)
+program
+  :: Parser
+       ( UPLC.Program
+           PLC.Name
+           PLC.DefaultUni
+           PLC.DefaultFun
+           SrcSpan
+       )
 program = leadingWhitespace go
   where
     go = do
@@ -148,7 +222,13 @@ explicity, use `parse program <name> <input>`.` -}
 parseProgram
   :: (MonadError PLC.ParserErrorBundle m, PLC.MonadQuote m)
   => Text
-  -> m (UPLC.Program PLC.Name PLC.DefaultUni PLC.DefaultFun SrcSpan)
+  -> m
+       ( UPLC.Program
+           PLC.Name
+           PLC.DefaultUni
+           PLC.DefaultFun
+           SrcSpan
+       )
 parseProgram = parseGen program
 
 {-| Parse and rewrite so that names are globally unique, not just unique within
@@ -156,7 +236,13 @@ their scope. -}
 parseScoped
   :: (MonadError (PLC.Error uni fun SrcSpan) m, PLC.MonadQuote m)
   => Text
-  -> m (UPLC.Program PLC.Name PLC.DefaultUni PLC.DefaultFun SrcSpan)
+  -> m
+       ( UPLC.Program
+           PLC.Name
+           PLC.DefaultUni
+           PLC.DefaultFun
+           SrcSpan
+       )
 -- don't require there to be no free variables at this point, we might be parsing an open term
 parseScoped =
   through (modifyError PLC.UniqueCoherencyErrorE . checkProgram (const True))

@@ -73,6 +73,7 @@ termMapNames f = go
       Force ann t -> Force ann (go t)
       Constr ann i es -> Constr ann i (fmap go es)
       Case ann arg cs -> Case ann (go arg) (fmap go cs)
+      Match ann arg alternatives -> Match ann (go arg) (fmap (fmap go) alternatives)
       Constant ann c -> Constant ann c
       Builtin ann b -> Builtin ann b
       Error ann -> Error ann

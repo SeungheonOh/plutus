@@ -39,9 +39,11 @@ import GHC.Exts (fromString)
 import GHC.Ix
 import GHC.TypeNats (natVal)
 import Hedgehog hiding (Size, Var, eval)
+import Prettyprinter (hardline)
 import Test.Tasty
 import Test.Tasty.Extras
 import Test.Tasty.Golden
+import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.Hedgehog
 
 testMachine
@@ -83,7 +85,7 @@ testBudget runtime name term =
     ( render $
         prettyPlcReadable $
           runCekNoEmit
-            ( MachineParameters def $
+            ( MachineParameters def def $
                 MachineVariantParameters Plc.defaultCekMachineCostsForTesting runtime
             )
             Cek.tallying
@@ -166,6 +168,11 @@ test_tallying =
 
 test_NumberOfStepCounters :: TestTree
 test_NumberOfStepCounters =
-  runTestNestedM ["untyped-plutus-core", "test", "Evaluation", "Machines"] $ do
-    nestedGoldenVsDoc "NumberOfStepCounters" "" . pretty . natVal $ Proxy @NumberOfStepCounters
-    nestedGoldenVsDoc "NumberOfStepCounters" "" . pretty . length $ enumerate @StepKind
+  testGroup
+    "NumberOfStepCounters"
+    [ runTestNestedM ["untyped-plutus-core", "test", "Evaluation", "Machines"] $ do
+        nestedGoldenVsDoc "NumberOfStepCounters" "" . (<> hardline) . pretty . natVal $
+          Proxy @NumberOfStepCounters
+    , testCase "type-level counter agrees with the StepKind enumeration" $
+        natVal (Proxy @NumberOfStepCounters) @?= fromIntegral (length $ enumerate @StepKind)
+    ]

@@ -23,7 +23,7 @@ module PlutusLedgerApi.Common.Eval
   ) where
 
 import PlutusCore
-import PlutusCore.Builtin (CaserBuiltin)
+import PlutusCore.Builtin (CaserBuiltin, MatcherBuiltin)
 import PlutusCore.Data as Plutus
 import PlutusCore.Default
 import PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
@@ -52,7 +52,12 @@ import NoThunks.Class
 -- | Errors that can be thrown when evaluating a Plutus script.
 data EvaluationError
   = -- | An error from the evaluator itself
-    CekError !(UPLC.CekEvaluationException NamedDeBruijn DefaultUni DefaultFun)
+    CekError
+      !( UPLC.CekEvaluationException
+           NamedDeBruijn
+           DefaultUni
+           DefaultFun
+       )
   | -- | An error in the pre-evaluation step of converting from de-Bruijn indices
     DeBruijnError !FreeVariableError
   | {-| A deserialisation error
@@ -125,13 +130,13 @@ mkTermToEvaluate ll pv script args = do
   through (liftEither . first DeBruijnError . UPLC.checkScope) appliedT
 
 toMachineParameters :: MajorProtocolVersion -> EvaluationContext -> DefaultMachineParameters
-toMachineParameters pv (EvaluationContext ll toCaser toSemVar machParsList) =
+toMachineParameters pv (EvaluationContext ll toCaser toMatcher toSemVar machParsList) =
   case lookup (toSemVar pv) machParsList of
     Nothing ->
       error $
         Prelude.concat
           ["Internal error: ", show ll, " does not support protocol version ", show pv]
-    Just machVarPars -> MachineParameters (toCaser pv) machVarPars
+    Just machVarPars -> MachineParameters (toCaser pv) (toMatcher pv) machVarPars
 
 {-| An opaque type that contains all the static parameters that the evaluator needs to evaluate a
 script. This is so that they can be computed once and cached, rather than being recomputed on every
@@ -171,6 +176,12 @@ data EvaluationContext = EvaluationContext
   is available.
   FIXME: do we need to test that it fails for older PVs?  We can't submit
   transactions in old PVs, so maybe it doesn't matter. -}
+  , _evalCtxMatcherBuiltin
+      :: MajorProtocolVersion
+      -> MatcherBuiltin DefaultUni
+  {-^ Specifies how 'match' on built-in values works. Match belongs to the experimental
+  Plutus Core 1.2 language, which has no ledger protocol activation yet, so all current
+  ledger evaluation contexts provide an unavailable matcher. -}
   , _evalCtxToSemVar :: MajorProtocolVersion -> BuiltinSemanticsVariant DefaultFun
   {-^ Specifies how to get a semantics variant for this ledger language given a
   'MajorProtocolVersion'. -}
@@ -198,13 +209,14 @@ mkDynEvaluationContext
   :: MonadError CostModelApplyError m
   => PlutusLedgerLanguage
   -> (MajorProtocolVersion -> CaserBuiltin DefaultUni)
+  -> (MajorProtocolVersion -> MatcherBuiltin DefaultUni)
   -> [BuiltinSemanticsVariant DefaultFun]
   -> (MajorProtocolVersion -> BuiltinSemanticsVariant DefaultFun)
   -> Plutus.CostModelParams
   -> m EvaluationContext
-mkDynEvaluationContext ll toCaser semVars toSemVar newCMP = do
+mkDynEvaluationContext ll toCaser toMatcher semVars toSemVar newCMP = do
   machPars <- mkMachineVariantParametersFor semVars newCMP
-  pure $ EvaluationContext ll toCaser toSemVar machPars
+  pure $ EvaluationContext ll toCaser toMatcher toSemVar machPars
 
 -- FIXME (https://github.com/IntersectMBO/plutus-private/issues/1726): remove this function
 assertWellFormedCostModelParams

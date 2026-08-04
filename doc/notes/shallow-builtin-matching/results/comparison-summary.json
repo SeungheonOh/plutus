@@ -1,0 +1,120 @@
+{
+  "by_depth": {
+    "1": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8449420490807039,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 1.532453874762443,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 1.1024786695030142,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 0.9070470274502359,
+      "shallow_faster_case_count": 9
+    },
+    "16": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.9200087942675258,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 3.2731064273432193,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.8308277603620474,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.2036189059983178,
+      "shallow_faster_case_count": 3
+    },
+    "4": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8994638665967118,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.3843184660665018,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.9375208012107707,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.066643000036415,
+      "shallow_faster_case_count": 3
+    }
+  },
+  "by_family": {
+    "alternating": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.9135113590340291,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.353835692160681,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.9372341670559174,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.0669692112711229,
+      "shallow_faster_case_count": 5
+    },
+    "constr": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8748716346558236,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.254072229362582,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.9586473589723206,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.043136447037219,
+      "shallow_faster_case_count": 5
+    },
+    "list": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8748716346558236,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.254072229362582,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.9557737849664861,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.0462726805538662,
+      "shallow_faster_case_count": 5
+    }
+  },
+  "by_width": {
+    "1": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.7396946992961188,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.803872810936793,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.8272378013828544,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.2088422438243842,
+      "shallow_faster_case_count": 3
+    },
+    "16": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 1.0985708491977066,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 1.8785479590013003,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 1.1342616566456074,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 0.8816307896339683,
+      "shallow_faster_case_count": 9
+    },
+    "4": {
+      "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8604428825970145,
+      "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.2705507033549854,
+      "case_count": 9,
+      "cpu_speedup_geometric_mean_shallow_over_nested": 0.9152052111369325,
+      "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.0926511211160275,
+      "shallow_faster_case_count": 3
+    }
+  },
+  "extremes": {
+    "best_shallow_cpu_time_ratio": {
+      "case_id": "alternating-d1-w16",
+      "value": 0.8429765585754666
+    },
+    "highest_shallow_budget_cpu_ratio": {
+      "case_id": "alternating-d16-w16",
+      "value": 1.1672144010669072
+    },
+    "highest_shallow_budget_memory_ratio": {
+      "case_id": "alternating-d16-w1",
+      "value": 5.223600150319429
+    },
+    "lowest_shallow_budget_cpu_ratio": {
+      "case_id": "constr-d16-w1",
+      "value": 0.7177490551414165
+    },
+    "lowest_shallow_budget_memory_ratio": {
+      "case_id": "alternating-d1-w1",
+      "value": 1.4957264957264957
+    },
+    "worst_shallow_cpu_time_ratio": {
+      "case_id": "alternating-d16-w1",
+      "value": 1.5426866517170805
+    }
+  },
+  "method": {
+    "cpu_repeats_per_implementation_case": 5,
+    "cross_case_statistic": "geometric mean of per-case ratios",
+    "per_case_cpu_statistic": "median of Criterion Mean",
+    "ratio_direction": "shallow / nested; values below 1 favor shallow"
+  },
+  "overall": {
+    "budget_cpu_ratio_geometric_mean_shallow_over_nested": 0.8875664439947543,
+    "budget_memory_ratio_geometric_mean_shallow_over_nested": 2.2868478296123964,
+    "case_count": 27,
+    "cpu_speedup_geometric_mean_shallow_over_nested": 0.9505041901212546,
+    "cpu_time_ratio_geometric_mean_shallow_over_nested": 1.0520732158712853,
+    "shallow_faster_case_count": 15
+  }
+}

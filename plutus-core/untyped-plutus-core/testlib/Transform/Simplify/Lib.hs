@@ -91,6 +91,10 @@ renderCertifierHints (Trace.OptimizerTrace ss)
         line i "InlCase"
           <> renderInlineHints (i + 2) scrut
           <> foldMap (renderInlineHints (i + 2)) alts
+      Hints.InlMatch scrut alternatives ->
+        line i "InlMatch"
+          <> renderInlineHints (i + 2) scrut
+          <> foldMap (renderInlineHints (i + 2)) alternatives
       Hints.InlExpand x -> line i "InlExpand" <> renderInlineHints (i + 2) x
       Hints.InlDrop x -> line i "InlDrop" <> renderInlineHints (i + 2) x
 

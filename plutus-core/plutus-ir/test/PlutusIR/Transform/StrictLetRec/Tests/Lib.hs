@@ -109,7 +109,7 @@ evaluateUplcProgramWithTraces uplcProg =
 
     machineParameters :: DefaultMachineParameters
     machineParameters =
-      MachineParameters def $ mkMachineVariantParameters def costModel
+      MachineParameters def def $ mkMachineVariantParameters def costModel
 
 defaultCompilationCtx
   :: Either

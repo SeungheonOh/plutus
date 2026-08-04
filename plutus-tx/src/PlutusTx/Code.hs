@@ -34,7 +34,7 @@ import Prelude as Haskell
 -- this 'CompiledCodeIn'. It could be okay to give it a representational role, since
 -- we compile newtypes the same as their underlying types, but people probably just
 -- shouldn't coerce the final parameter regardless, so we play it safe with a nominal role.
-type role CompiledCodeIn representational representational nominal
+type role CompiledCodeIn nominal representational nominal
 
 -- NOTE: any changes to this type must be paralleled by changes
 -- in the plugin code that generates values of this type. That is
@@ -69,6 +69,7 @@ type CompiledCode = CompiledCodeIn PLC.DefaultUni PLC.DefaultFun
 applyCode
   :: ( PLC.Closed uni
      , uni `PLC.Everywhere` Flat
+     , Flat (PLC.BuiltinPattern uni)
      , Flat fun
      , Pretty fun
      , PLC.Everywhere uni PrettyConst
@@ -107,19 +108,22 @@ should only be used in non-production code. -}
 unsafeApplyCode
   :: ( PLC.Closed uni
      , uni `PLC.Everywhere` Flat
+     , Flat (PLC.BuiltinPattern uni)
      , Flat fun
      , Pretty fun
      , PLC.Everywhere uni PrettyConst
      , PrettyBy RenderContext (PLC.SomeTypeIn uni)
      )
-  => CompiledCodeIn uni fun (a -> b) -> CompiledCodeIn uni fun a -> CompiledCodeIn uni fun b
+  => CompiledCodeIn uni fun (a -> b)
+  -> CompiledCodeIn uni fun a
+  -> CompiledCodeIn uni fun b
 unsafeApplyCode fun arg = case applyCode fun arg of
   Right c -> c
   Left err -> error err
 
 -- | The size of a 'CompiledCodeIn' as measured in AST nodes.
 countAstNodes
-  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat fun)
+  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat (PLC.BuiltinPattern uni), Flat fun)
   => CompiledCodeIn uni fun a
   -> Integer
 countAstNodes = UPLC.unAstSize . UPLC.programAstSize . getPlc
@@ -136,8 +140,9 @@ instance Show ImpossibleDeserialisationFailure where
 
 -- | Get the actual Plutus Core program out of a 'CompiledCodeIn'.
 getPlc
-  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat fun)
-  => CompiledCodeIn uni fun a -> UPLC.Program UPLC.NamedDeBruijn uni fun SrcSpans
+  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat (PLC.BuiltinPattern uni), Flat fun)
+  => CompiledCodeIn uni fun a
+  -> UPLC.Program UPLC.NamedDeBruijn uni fun SrcSpans
 getPlc wrapper = case wrapper of
   SerializedCode plc _ _ -> case unflat (BSL.fromStrict plc) of
     Left e -> throw $ ImpossibleDeserialisationFailure e
@@ -145,8 +150,9 @@ getPlc wrapper = case wrapper of
   DeserializedCode plc _ _ -> plc
 
 getPlcNoAnn
-  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat fun)
-  => CompiledCodeIn uni fun a -> UPLC.Program UPLC.NamedDeBruijn uni fun ()
+  :: (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat (PLC.BuiltinPattern uni), Flat fun)
+  => CompiledCodeIn uni fun a
+  -> UPLC.Program UPLC.NamedDeBruijn uni fun ()
 getPlcNoAnn = void . getPlc
 
 -- | Get the Plutus IR program, if there is one, out of a 'CompiledCodeIn'.

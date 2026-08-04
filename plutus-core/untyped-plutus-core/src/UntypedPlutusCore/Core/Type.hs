@@ -1,15 +1,18 @@
 -- editorconfig-checker-disable-file
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module UntypedPlutusCore.Core.Type
   ( TPLC.UniOf
+  , TPLC.BuiltinPattern
   , TPLC.Version (..)
   , TPLC.Binder (..)
   , Term (..)
@@ -49,8 +52,8 @@ Additionally, the first 7 (or 3 on 32-bit systems) constructors will get *pointe
 more efficient access when casing on them. So we ideally want to keep the number of constructors
 at 7 or fewer.
 
-We've got 8 constructors, *but* the last one is Error, which is only going to be seen at most
-once per program, so it's not too big a deal if it doesn't get a tag.
+The family has grown beyond the pointer-tag limit. The ordering still keeps the most common
+constructors first; 'Match' is intentionally last because it is expected to be comparatively rare.
 
 See the GHC Notes "Tagging big families" and "Double switching for big families" in
 GHC.StgToCmm.Expr for more details.
@@ -64,7 +67,9 @@ However in https://github.com/IntersectMBO/plutus/issues/6602 we decided that th
 speed up processing values of built-in types is to extend 'Case' such that it supports pattern
 matching on those.
 
-Currently, 'Case' only supports booleans and integers, but we plan to extend it to lists and data.
+Legacy built-in casing supports unit, booleans, integers, lists and pairs.  The separate 'Match'
+node provides ordered, first-match-wins pattern semantics, including structural matching on 'Data'.
+Keeping it separate preserves the behavior and cost of every existing 'Case'.
 
 See the @CaseBuiltin DefaultUni@ instance for how casing behaves for supported built-in types.
 -}
@@ -101,14 +106,35 @@ data Term name uni fun ann
     Constr !ann !Word64 ![Term name uni fun ann]
   | -- See Note [Supported case-expressions].
     Case !ann !(Term name uni fun ann) !(Vector (Term name uni fun ann))
+  | {-| Ordered, first-match-wins pattern alternatives.
+    The pattern type and capture semantics are supplied by the built-in universe. -}
+    Match
+      !ann
+      !(Term name uni fun ann)
+      !(Vector (TPLC.BuiltinPattern uni, Term name uni fun ann))
   deriving stock (Functor, Generic)
 
+type role Term representational nominal representational representational
+
 deriving stock instance
-  (Show name, GShow uni, Everywhere uni Show, Show fun, Show ann, Closed uni)
+  ( Show name
+  , GShow uni
+  , Everywhere uni Show
+  , Show fun
+  , Show (TPLC.BuiltinPattern uni)
+  , Show ann
+  , Closed uni
+  )
   => Show (Term name uni fun ann)
 
 deriving anyclass instance
-  (NFData name, NFData fun, NFData ann, Everywhere uni NFData, Closed uni)
+  ( NFData name
+  , NFData fun
+  , NFData (TPLC.BuiltinPattern uni)
+  , NFData ann
+  , Everywhere uni NFData
+  , Closed uni
+  )
   => NFData (Term name uni fun ann)
 
 -- See Note [ExMemoryUsage instances for non-constants].
@@ -117,6 +143,8 @@ instance ExMemoryUsage (Term name uni fun ann) where
     Prelude.error "Internal error: 'memoryUsage' for UPLC 'Term' is not supposed to be forced"
 
 -- | A 'Program' is simply a 'Term' coupled with a 'Version' of the core language.
+type role Program representational nominal representational representational
+
 data Program name uni fun ann = Program
   { _progAnn :: ann
   , _progVer :: TPLC.Version
@@ -127,11 +155,24 @@ data Program name uni fun ann = Program
 makeLenses ''Program
 
 deriving stock instance
-  (Show name, GShow uni, Everywhere uni Show, Show fun, Show ann, Closed uni)
+  ( Show name
+  , GShow uni
+  , Everywhere uni Show
+  , Show fun
+  , Show (TPLC.BuiltinPattern uni)
+  , Show ann
+  , Closed uni
+  )
   => Show (Program name uni fun ann)
 
 deriving anyclass instance
-  (NFData name, Everywhere uni NFData, NFData fun, NFData ann, Closed uni)
+  ( NFData name
+  , Everywhere uni NFData
+  , NFData fun
+  , NFData (TPLC.BuiltinPattern uni)
+  , NFData ann
+  , Closed uni
+  )
   => NFData (Program name uni fun ann)
 
 type instance TPLC.UniOf (Term name uni fun ann) = uni
@@ -180,6 +221,7 @@ instance HasAnn (Term name uni fun) where
   getAnn (Error ann) = ann
   getAnn (Constr ann _ _) = ann
   getAnn (Case ann _ _) = ann
+  getAnn (Match ann _ _) = ann
   modifyAnn f = \case
     Constant ann c -> Constant (f ann) c
     Builtin ann b -> Builtin (f ann) b
@@ -191,6 +233,7 @@ instance HasAnn (Term name uni fun) where
     Error ann -> Error (f ann)
     Constr ann i args -> Constr (f ann) i args
     Case ann scrut alts -> Case (f ann) scrut alts
+    Match ann scrut alts -> Match (f ann) scrut alts
 
 bindFunM
   :: Monad m
@@ -209,6 +252,8 @@ bindFunM f = go
     go (Error ann) = pure $ Error ann
     go (Constr ann i args) = Constr ann i <$> traverse go args
     go (Case ann arg cs) = Case ann <$> go arg <*> traverse go cs
+    go (Match ann arg alternatives) =
+      Match ann <$> go arg <*> traverse (traverse go) alternatives
 
 bindFun
   :: (ann -> fun -> Term name uni fun' ann)

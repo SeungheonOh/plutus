@@ -20,7 +20,12 @@ import Prettyprinter.Custom
 import Universe (Some (..), SomeTypeIn (SomeTypeIn), ValueOf (..))
 
 instance
-  (PrettyClassicBy configName name, PrettyUni uni, Pretty fun, Pretty ann)
+  ( PrettyClassicBy configName name
+  , PrettyUni uni
+  , Pretty fun
+  , Pretty (BuiltinPattern uni)
+  , Pretty ann
+  )
   => PrettyBy (PrettyConfigClassic configName) (Term name uni fun ann)
   where
   prettyBy config = \case
@@ -81,7 +86,17 @@ instance
             ann
             (prettyBy config arg : fmap (prettyBy config) (toList cs))
         )
+    Match ann arg alternatives ->
+      sexp
+        "match"
+        ( consAnnIf
+            config
+            ann
+            (prettyBy config arg : fmap prettyAlternative (toList alternatives))
+        )
     where
+      prettyAlternative (pat, handler) =
+        sexp "pattern" [pretty pat, prettyBy config handler]
       prettyTypeOf :: Some (ValueOf uni) -> Doc dann
       prettyTypeOf (Some (ValueOf uni _)) = prettyBy juxtRenderContext $ SomeTypeIn uni
 

@@ -7,6 +7,9 @@ module UntypedPlutusCore
   , parseScoped
   , PLC.DefaultUni
   , PLC.DefaultFun
+  , PLC.DefaultBuiltinPattern
+  , PLC.DefaultPatternField
+  , PLC.DefaultPatternFieldEnd
   ) where
 
 import UntypedPlutusCore.AstSize as Export
@@ -19,8 +22,8 @@ import UntypedPlutusCore.Subst as Export
 
 import PlutusCore.Default qualified as PLC
 import PlutusCore.Error (ApplyProgramError (MkApplyProgramError))
-import PlutusPrelude (getAnn)
 import PlutusCore.Name.Unique as Export
+import PlutusPrelude (getAnn)
 
 import Control.Monad.Except
 

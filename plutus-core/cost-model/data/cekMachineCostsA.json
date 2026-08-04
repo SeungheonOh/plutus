@@ -8,5 +8,7 @@
   "cekApplyCost": { "exBudgetCPU": 23000, "exBudgetMemory": 100 },
   "cekBuiltinCost": { "exBudgetCPU": 23000, "exBudgetMemory": 100 },
   "cekConstrCost": { "exBudgetCPU": 23000, "exBudgetMemory": 100 },
-  "cekCaseCost": { "exBudgetCPU": 23000, "exBudgetMemory": 100 }
+  "cekCaseCost": { "exBudgetCPU": 23000, "exBudgetMemory": 100 },
+  "cekMatchCost": { "exBudgetCPU": 27493, "exBudgetMemory": 200 },
+  "cekMatchWorkCost": { "exBudgetCPU": 19134, "exBudgetMemory": 100 }
 }

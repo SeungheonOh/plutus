@@ -16,6 +16,11 @@ termAstSize term =
   fold
     [ AstSize 1
     , term ^. termSubterms . to termAstSize
+    , case term of
+        -- A universe-specific pattern is one opaque UPLC AST node. Its internal size is accounted
+        -- for by its own serialisation and validation rather than by the generic term traversal.
+        Match _ _ alternatives -> foldMap (const $ AstSize 1) alternatives
+        _ -> mempty
     ]
 
 -- | Count the number of AST nodes in a program.

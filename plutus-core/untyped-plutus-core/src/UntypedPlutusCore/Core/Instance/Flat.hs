@@ -65,7 +65,7 @@ tags and their used/available encoding possibilities.
 \| Data type        | Function          | Bit Width | Total | Used | Remaining |
 \|------------------|-------------------|-----------|-------|------|-----------|
 \| default builtins | encodeBuiltin     | 7         | 128   | 54   | 74        |
-\| Terms            | encodeTerm        | 4         | 16    | 10   | 6         |
+\| Terms            | encodeTerm        | 4         | 16    | 11   | 5         |
 
 For format stability we are manually assigning the tag values to the
 constructors (and we do not use a generic algorithm that may change this order).
@@ -106,6 +106,7 @@ encodeTerm
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -124,11 +125,19 @@ encodeTerm = \case
   Builtin ann bn -> encodeTermTag 7 <> encode ann <> encode bn
   Constr ann i es -> encodeTermTag 8 <> encode ann <> encode i <> encodeListWith encodeTerm es
   Case ann arg cs -> encodeTermTag 9 <> encode ann <> encodeTerm arg <> encodeListWith encodeTerm (V.toList cs)
+  Match ann arg alternatives ->
+    encodeTermTag 10
+      <> encode ann
+      <> encodeTerm arg
+      <> encodeListWith encodeAlternative (V.toList alternatives)
+    where
+      encodeAlternative (pat, handler) = encode pat <> encodeTerm handler
 
 decodeTerm
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -138,8 +147,9 @@ decodeTerm
   -> (Some (ValueOf uni) -> Maybe String)
   -> (fun -> Maybe String)
   -> (Int -> Maybe String)
+  -> (BuiltinPattern uni -> Maybe String)
   -> Get (Term name uni fun ann)
-decodeTerm version constantPred builtinPred constrPred = go
+decodeTerm version constantPred builtinPred constrPred patternPred = go
   where
     go = handleTerm =<< decodeTermTag
     handleTerm 0 = Var <$> decode <*> decode
@@ -183,12 +193,26 @@ decodeTerm version constantPred builtinPred constrPred = go
         fail $
           "'case' is not allowed before version 1.1.0, this program has version: " ++ (show $ pretty version)
       Case <$> decode <*> go <*> (V.fromList <$> decodeListWith go)
+    handleTerm 10 = do
+      unless (version >= PLC.plcVersion120) $
+        fail $
+          "'match' is not allowed before version 1.2.0, this program has version: " ++ (show $ pretty version)
+      Match <$> decode <*> go <*> (V.fromList <$> decodeListWith decodeAlternative)
+      where
+        decodeAlternative = do
+          pat <- decode
+          case patternPred pat of
+            Nothing -> do
+              handler <- go
+              pure (pat, handler)
+            Just err -> fail err
     handleTerm t = fail $ "Unknown term constructor tag: " ++ show t
 
 sizeTerm
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -212,6 +236,10 @@ sizeTerm tm sz =
       Builtin ann bn -> size ann $ size bn sz'
       Constr ann i es -> size ann $ size i $ sizeListWith sizeTerm es sz'
       Case ann arg cs -> size ann $ sizeTerm arg $ sizeListWith sizeTerm (V.toList cs) sz'
+      Match ann arg alternatives ->
+        size ann $ sizeTerm arg $ sizeListWith sizeAlternative (V.toList alternatives) sz'
+        where
+          sizeAlternative (pat, handler) = size pat . sizeTerm handler
 
 {-| An encoder for programs.
 
@@ -221,6 +249,7 @@ encodeProgram
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -234,6 +263,7 @@ decodeProgram
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -242,16 +272,18 @@ decodeProgram
   => (Some (ValueOf uni) -> Maybe String)
   -> (fun -> Maybe String)
   -> (Int -> Maybe String)
+  -> (Version -> BuiltinPattern uni -> Maybe String)
   -> Get (Program name uni fun ann)
-decodeProgram constantPred builtinPred constrPred = do
+decodeProgram constantPred builtinPred constrPred patternPred = do
   ann <- decode
   v <- decode
-  Program ann v <$> decodeTerm v constantPred builtinPred constrPred
+  Program ann v <$> decodeTerm v constantPred builtinPred constrPred (patternPred v)
 
 sizeProgram
   :: forall name uni fun ann
    . ( Closed uni
      , uni `Everywhere` Flat
+     , Flat (BuiltinPattern uni)
      , Flat fun
      , Flat ann
      , Flat name
@@ -272,7 +304,14 @@ newtype UnrestrictedProgram name uni fun ann = UnrestrictedProgram {unUnrestrict
 makeWrapped ''UnrestrictedProgram
 
 deriving newtype instance
-  (Show name, GShow uni, Everywhere uni Show, Show fun, Show ann, Closed uni)
+  ( Show name
+  , GShow uni
+  , Everywhere uni Show
+  , Show fun
+  , Show (BuiltinPattern uni)
+  , Show ann
+  , Closed uni
+  )
   => Show (UnrestrictedProgram name uni fun ann)
 
 deriving via
@@ -282,17 +321,18 @@ deriving via
     => PrettyBy PrettyConfigPlc (UnrestrictedProgram name uni fun ann)
 
 deriving newtype instance
-  (PrettyClassic name, PrettyUni uni, Pretty fun, Pretty ann)
+  (PrettyClassic name, PrettyUni uni, Pretty (BuiltinPattern uni), Pretty fun, Pretty ann)
   => PrettyBy (PrettyConfigClassic PrettyConfigName) (UnrestrictedProgram name uni fun ann)
 
 deriving newtype instance
-  (PrettyReadable name, PrettyUni uni, Pretty fun)
+  (PrettyReadable name, PrettyUni uni, Pretty (BuiltinPattern uni), Pretty fun)
   => PrettyBy (PrettyConfigReadable PrettyConfigName) (UnrestrictedProgram name uni fun ann)
 
 -- This instance does _not_ check for allowable builtins
 instance
   ( Closed uni
   , uni `Everywhere` Flat
+  , Flat (BuiltinPattern uni)
   , Flat fun
   , Flat ann
   , Flat name
@@ -301,6 +341,8 @@ instance
   => Flat (UnrestrictedProgram name uni fun ann)
   where
   encode (UnrestrictedProgram p) = encodeProgram p
-  decode = UnrestrictedProgram <$> decodeProgram (const Nothing) (const Nothing) (const Nothing)
+  decode =
+    UnrestrictedProgram
+      <$> decodeProgram (const Nothing) (const Nothing) (const Nothing) (const $ const Nothing)
 
   size (UnrestrictedProgram p) = sizeProgram p

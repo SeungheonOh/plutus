@@ -86,7 +86,8 @@ d_TermNU_22
   = error
       "MAlonzo Runtime Error: postulate evaluated: Evaluator.Term.TermNU"
 -- Evaluator.Term.TermU
-type T_TermU_24 = U.Term NamedDeBruijn DefaultUni DefaultFun ()
+type T_TermU_24 =
+  U.Term NamedDeBruijn DefaultUni DefaultFun ()
 d_TermU_24
   = error
       "MAlonzo Runtime Error: postulate evaluated: Evaluator.Term.TermU"

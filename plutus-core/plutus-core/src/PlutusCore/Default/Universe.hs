@@ -11,6 +11,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -20,6 +21,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -35,6 +37,9 @@
 -- | The universe used by default and its instances.
 module PlutusCore.Default.Universe
   ( DefaultUni (..)
+  , DefaultBuiltinPattern (..)
+  , DefaultPatternField (..)
+  , DefaultPatternFieldEnd (..)
   , pattern DefaultUniList
   , pattern DefaultUniArray
   , pattern DefaultUniPair
@@ -51,6 +56,7 @@ import PlutusCore.Crypto.BLS12_381.G1 qualified as BLS12_381.G1
 import PlutusCore.Crypto.BLS12_381.G2 qualified as BLS12_381.G2
 import PlutusCore.Crypto.BLS12_381.Pairing qualified as BLS12_381.Pairing
 import PlutusCore.Data (Data)
+import PlutusCore.Data qualified as PLC
 import PlutusCore.Default.Universe.Cardano
 import PlutusCore.Evaluation.Machine.ExMemoryUsage
   ( DataNodeCount (..)
@@ -60,12 +66,20 @@ import PlutusCore.Evaluation.Machine.ExMemoryUsage
   , ValueMaxDepth (..)
   , ValueTotalSize (..)
   )
+import PlutusCore.Flat (Flat (..))
+import PlutusCore.Flat.Decoder (dBEBits8, decodeListWith)
+import PlutusCore.Flat.Encoder (encodeListWith)
+import PlutusCore.Flat.Encoder.Strict (sizeListWith)
+import PlutusCore.Flat.Types (NumBits)
+import PlutusCore.FlatInstances (safeEncodeBits)
 import PlutusCore.Pretty.Extra (juxtRenderContext)
+import PlutusCore.Pretty.Utils (prettyBytes)
 import PlutusCore.Value (Value)
 
 import Control.Monad.Except (throwError)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as B
+import Data.Hashable (Hashable (..))
 import Data.Int
   ( Int16
   , Int32
@@ -80,6 +94,7 @@ import Data.Vector qualified as Vector
 import Data.Vector.Strict qualified as Strict (Vector)
 import Data.Word (Word16, Word32)
 import GHC.Exts (inline, oneShot)
+import Prettyprinter (parens, sep, (<+>))
 import Text.PrettyBy.Fixity
   ( RenderContext
   , inContextM
@@ -147,6 +162,227 @@ pattern DefaultUniArray uniA =
   DefaultUniProtoArray `DefaultUniApply` uniA
 pattern DefaultUniPair uniA uniB =
   DefaultUniProtoPair `DefaultUniApply` uniA `DefaultUniApply` uniB
+
+{-| A field action in a shallow structural pattern. Structural patterns deliberately contain
+these actions rather than other 'DefaultBuiltinPattern's, making recursive matching
+unrepresentable in the AST. -}
+data DefaultPatternField
+  = DefaultPatternFieldWildcard
+  | DefaultPatternFieldBind
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable, NFData)
+
+{-| How a shallow sequence of structural fields terminates. Exact patterns require that all fields
+have been consumed; a terminal @rest@ ignores the unconsumed suffix. -}
+data DefaultPatternFieldEnd
+  = DefaultPatternFieldsExact
+  | DefaultPatternFieldsRest
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable, NFData)
+
+{-| Shallow patterns for values in 'DefaultUni'. Scalar alternatives inspect one value. Structural
+alternatives inspect only the outer constructor and perform bind/wildcard actions on its immediate
+fields; another structural pattern can never occur in a field position. Nested values are
+deconstructed by subsequent 'Match' terms in the selected handler. -}
+data DefaultBuiltinPattern
+  = DefaultPatternWildcard
+  | DefaultPatternCapture
+  | DefaultPatternInteger !Int64
+  | DefaultPatternByteString !ByteString
+  | DefaultPatternBool !Bool
+  | DefaultPatternUnit
+  | DefaultPatternList
+      !DefaultPatternFieldEnd
+      !(Vector.Vector DefaultPatternField)
+  | DefaultPatternPair !DefaultPatternField !DefaultPatternField
+  | DefaultPatternDataConstr
+      !Word64
+      !DefaultPatternFieldEnd
+      !(Vector.Vector DefaultPatternField)
+  | DefaultPatternDataMap
+      !DefaultPatternFieldEnd
+      !(Vector.Vector DefaultPatternField)
+  | DefaultPatternDataList
+      !DefaultPatternFieldEnd
+      !(Vector.Vector DefaultPatternField)
+  | DefaultPatternDataI !DefaultPatternField
+  | DefaultPatternDataB !DefaultPatternField
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData)
+
+-- 'Vector' deliberately has no blanket 'Hashable' instance in our dependency set, so hash the
+-- serial order of structural children explicitly.
+instance Hashable DefaultBuiltinPattern where
+  hashWithSalt salt = \case
+    DefaultPatternWildcard -> hashWithSalt salt (0 :: Int)
+    DefaultPatternCapture -> hashWithSalt salt (1 :: Int)
+    DefaultPatternInteger value -> salt `hashWithSalt` (2 :: Int) `hashWithSalt` value
+    DefaultPatternByteString value -> salt `hashWithSalt` (3 :: Int) `hashWithSalt` value
+    DefaultPatternBool value -> salt `hashWithSalt` (4 :: Int) `hashWithSalt` value
+    DefaultPatternUnit -> hashWithSalt salt (5 :: Int)
+    DefaultPatternList fieldEnd children ->
+      hashFields (hashWithSalt salt (6 :: Int)) fieldEnd children
+    DefaultPatternPair left right ->
+      salt `hashWithSalt` (7 :: Int) `hashWithSalt` left `hashWithSalt` right
+    DefaultPatternDataConstr tag fieldEnd children ->
+      hashFields
+        (salt `hashWithSalt` (8 :: Int) `hashWithSalt` tag)
+        fieldEnd
+        children
+    DefaultPatternDataMap fieldEnd children ->
+      hashFields (hashWithSalt salt (9 :: Int)) fieldEnd children
+    DefaultPatternDataList fieldEnd children ->
+      hashFields (hashWithSalt salt (10 :: Int)) fieldEnd children
+    DefaultPatternDataI child -> salt `hashWithSalt` (11 :: Int) `hashWithSalt` child
+    DefaultPatternDataB child -> salt `hashWithSalt` (12 :: Int) `hashWithSalt` child
+    where
+      hashChildren childSalt children =
+        Vector.foldl' hashWithSalt (hashWithSalt childSalt $ Vector.length children) children
+      hashFields fieldSalt fieldEnd =
+        hashChildren (hashWithSalt fieldSalt fieldEnd)
+
+instance Pretty DefaultBuiltinPattern where
+  pretty = \case
+    DefaultPatternWildcard -> parens "wildcard"
+    DefaultPatternCapture -> parens "bind"
+    DefaultPatternInteger i -> parens $ "integer" <+> pretty i
+    DefaultPatternByteString b -> parens $ "bytestring" <+> prettyBytes b
+    DefaultPatternBool b -> parens $ "bool" <+> pretty b
+    DefaultPatternUnit -> parens "unit"
+    DefaultPatternList fieldEnd children ->
+      prettyFields "list" [] fieldEnd children
+    DefaultPatternPair left right ->
+      parens . sep $ ["pair", prettyField left, prettyField right]
+    DefaultPatternDataConstr i fieldEnd children ->
+      prettyFields "data-constr" [pretty i] fieldEnd children
+    DefaultPatternDataMap fieldEnd children ->
+      prettyFields "data-map" [] fieldEnd children
+    DefaultPatternDataList fieldEnd children ->
+      prettyFields "data-list" [] fieldEnd children
+    DefaultPatternDataI child -> prettyChild "data-i" child
+    DefaultPatternDataB child -> prettyChild "data-b" child
+    where
+      prettyField DefaultPatternFieldWildcard = parens "wildcard"
+      prettyField DefaultPatternFieldBind = parens "bind"
+      prettyPatternChildren = fmap prettyField . Vector.toList
+      prettyChild name child = parens . sep $ [name, prettyField child]
+      prettyFields name leading fieldEnd children =
+        let prettyChildren = prettyPatternChildren children
+            fields = name : leading <> prettyChildren
+         in case fieldEnd of
+              DefaultPatternFieldsExact -> parens . sep $ fields
+              DefaultPatternFieldsRest -> parens . sep $ fields <> [parens "rest"]
+
+defaultBuiltinPatternTagWidth :: NumBits
+defaultBuiltinPatternTagWidth = 4
+
+defaultPatternFieldTagWidth :: NumBits
+defaultPatternFieldTagWidth = 1
+
+instance Flat DefaultPatternField where
+  encode = \case
+    DefaultPatternFieldWildcard -> safeEncodeBits defaultPatternFieldTagWidth 0
+    DefaultPatternFieldBind -> safeEncodeBits defaultPatternFieldTagWidth 1
+
+  decode =
+    dBEBits8 defaultPatternFieldTagWidth >>= \case
+      0 -> pure DefaultPatternFieldWildcard
+      1 -> pure DefaultPatternFieldBind
+      tag -> fail $ "Unknown shallow built-in pattern field tag: " ++ show tag
+
+  size _ = (+ defaultPatternFieldTagWidth)
+
+instance Flat DefaultBuiltinPattern where
+  encode = \case
+    DefaultPatternWildcard -> tag 0
+    DefaultPatternCapture -> tag 1
+    DefaultPatternInteger i -> tag 2 <> encode i
+    DefaultPatternByteString b -> tag 3 <> encode b
+    DefaultPatternBool b -> tag 4 <> encode b
+    DefaultPatternUnit -> tag 5
+    DefaultPatternList fieldEnd children ->
+      encodeFields fieldEnd $ tag 6 <> encodeChildren children
+    DefaultPatternPair left right -> tag 7 <> encode left <> encode right
+    DefaultPatternDataConstr i fieldEnd children ->
+      encodeFields fieldEnd $ tag 8 <> encode i <> encodeChildren children
+    DefaultPatternDataMap fieldEnd children ->
+      encodeFields fieldEnd $ tag 9 <> encodeChildren children
+    DefaultPatternDataList fieldEnd children ->
+      encodeFields fieldEnd $ tag 10 <> encodeChildren children
+    DefaultPatternDataI child -> tag 11 <> encode child
+    DefaultPatternDataB child -> tag 12 <> encode child
+    where
+      tag = safeEncodeBits defaultBuiltinPatternTagWidth
+      encodeChildren = encodeListWith encode . Vector.toList
+      encodeFields fieldEnd exactDescriptor = case fieldEnd of
+        DefaultPatternFieldsExact -> exactDescriptor
+        DefaultPatternFieldsRest -> tag 13 <> exactDescriptor
+
+  decode =
+    dBEBits8 defaultBuiltinPatternTagWidth >>= \case
+      0 -> pure DefaultPatternWildcard
+      1 -> pure DefaultPatternCapture
+      2 -> DefaultPatternInteger <$> decode
+      3 -> DefaultPatternByteString <$> decode
+      4 -> DefaultPatternBool <$> decode
+      5 -> pure DefaultPatternUnit
+      6 -> decodeFieldsDescriptor (pure DefaultPatternFieldsExact) 6
+      7 -> DefaultPatternPair <$> decode <*> decode
+      8 -> decodeFieldsDescriptor (pure DefaultPatternFieldsExact) 8
+      9 -> decodeFieldsDescriptor (pure DefaultPatternFieldsExact) 9
+      10 -> decodeFieldsDescriptor (pure DefaultPatternFieldsExact) 10
+      11 -> DefaultPatternDataI <$> decode
+      12 -> DefaultPatternDataB <$> decode
+      13 ->
+        dBEBits8 defaultBuiltinPatternTagWidth
+          >>= decodeFieldsDescriptor (pure DefaultPatternFieldsRest)
+      tag -> fail $ "Unknown default built-in pattern tag: " ++ show tag
+    where
+      decodeChildren = Vector.fromList <$> decodeListWith decode
+      decodeFieldsDescriptor decodeFieldEnd = \case
+        6 -> do
+          children <- decodeChildren
+          fieldEnd <- decodeFieldEnd
+          pure $ DefaultPatternList fieldEnd children
+        8 -> do
+          constrTag <- decode
+          children <- decodeChildren
+          fieldEnd <- decodeFieldEnd
+          pure $ DefaultPatternDataConstr constrTag fieldEnd children
+        9 -> do
+          children <- decodeChildren
+          fieldEnd <- decodeFieldEnd
+          pure $ DefaultPatternDataMap fieldEnd children
+        10 -> do
+          children <- decodeChildren
+          fieldEnd <- decodeFieldEnd
+          pure $ DefaultPatternDataList fieldEnd children
+        tag -> fail $ "Invalid structural descriptor in default rest pattern: " ++ show tag
+  size pat sz =
+    let sz' = defaultBuiltinPatternTagWidth + sz
+     in case pat of
+          DefaultPatternWildcard -> sz'
+          DefaultPatternCapture -> sz'
+          DefaultPatternInteger i -> size i sz'
+          DefaultPatternByteString b -> size b sz'
+          DefaultPatternBool b -> size b sz'
+          DefaultPatternUnit -> sz'
+          DefaultPatternList fieldEnd children ->
+            sizeFields fieldEnd $ sizeChildren children sz'
+          DefaultPatternPair left right -> size left $ size right sz'
+          DefaultPatternDataConstr i fieldEnd children ->
+            sizeFields fieldEnd $ size i $ sizeChildren children sz'
+          DefaultPatternDataMap fieldEnd children ->
+            sizeFields fieldEnd $ sizeChildren children sz'
+          DefaultPatternDataList fieldEnd children ->
+            sizeFields fieldEnd $ sizeChildren children sz'
+          DefaultPatternDataI child -> size child sz'
+          DefaultPatternDataB child -> size child sz'
+    where
+      sizeChildren = sizeListWith size . Vector.toList
+      sizeFields fieldEnd exactSize = case fieldEnd of
+        DefaultPatternFieldsExact -> exactSize
+        DefaultPatternFieldsRest -> exactSize + defaultBuiltinPatternTagWidth
 
 defaultUniSize :: forall k (a :: k). DefaultUni (Esc a) -> Int
 defaultUniSize = \case
@@ -887,6 +1123,12 @@ outOfBoundsErr x branches =
     , display $ Vector.length branches
     ]
 
+byteStringPatternWords :: ByteString -> Word64
+byteStringPatternWords bs =
+  let (wholeWords, trailingBytes) = B.length bs `quotRem` 8
+   in fromIntegral $ wholeWords + if trailingBytes == 0 then 0 else 1
+{-# INLINE byteStringPatternWords #-}
+
 instance AnnotateCaseBuiltin DefaultUni where
   annotateCaseBuiltin ty branches = case ty of
     TyBuiltin _ (SomeTypeIn DefaultUniUnit) ->
@@ -945,6 +1187,194 @@ instance CaseBuiltin DefaultUni where
     where
       !len = Vector.length branches
   {-# INLINE caseBuiltin #-}
+
+type DefaultReverseCaptures = [Some (ValueOf DefaultUni)]
+
+{-| The base shallow-work charge is available in constant time. In particular, vector length is
+read before traversing the fields, so this charge can bound the subsequent bind-counting pass.
+Each requested immediate field costs one unit and ByteString equality is prepaid in eight-byte
+chunks. -}
+defaultPatternBaseWork :: DefaultBuiltinPattern -> Word64
+defaultPatternBaseWork = \case
+  DefaultPatternWildcard -> 0
+  DefaultPatternCapture -> 0
+  DefaultPatternInteger _ -> 0
+  DefaultPatternByteString bytes -> byteStringPatternWords bytes
+  DefaultPatternBool _ -> 0
+  DefaultPatternUnit -> 0
+  DefaultPatternList _ fields -> fieldsBaseWork fields
+  DefaultPatternPair _ _ -> 2
+  DefaultPatternDataConstr _ _ fields -> fieldsBaseWork fields
+  DefaultPatternDataMap _ fields -> fieldsBaseWork fields
+  DefaultPatternDataList _ fields -> fieldsBaseWork fields
+  DefaultPatternDataI _ -> 1
+  DefaultPatternDataB _ -> 1
+  where
+    fieldsBaseWork = fromIntegral . Vector.length
+
+{-| Count the additional unit for every capture. For vector patterns this is linear in the number
+of fields, so callers must spend 'defaultPatternBaseWork' before evaluating this function. -}
+defaultPatternBindWork :: DefaultBuiltinPattern -> Word64
+defaultPatternBindWork = \case
+  DefaultPatternCapture -> 1
+  DefaultPatternList _ fields -> fieldsBindWork fields
+  DefaultPatternPair left right -> fieldBindWork left + fieldBindWork right
+  DefaultPatternDataConstr _ _ fields -> fieldsBindWork fields
+  DefaultPatternDataMap _ fields -> fieldsBindWork fields
+  DefaultPatternDataList _ fields -> fieldsBindWork fields
+  DefaultPatternDataI field -> fieldBindWork field
+  DefaultPatternDataB field -> fieldBindWork field
+  _ -> 0
+  where
+    fieldBindWork DefaultPatternFieldWildcard = 0
+    fieldBindWork DefaultPatternFieldBind = 1
+    fieldsBindWork = Vector.foldl' (\work field -> work + fieldBindWork field) 0
+
+{-| Select the first matching shallow alternative. The ordinary Match step covers the first root
+probe. Before each attempt we prepay the constant-time base charge, then use it to bound counting
+binds and prepay their additional charge before traversing the scrutinee. Every later alternative
+also prepays one unit for its additional root probe. This avoids a recursive costing stack and
+bounds list traversal even when an exact pattern fails on arity. -}
+matchDefaultAlternatives
+  :: forall s term
+   . Some (ValueOf DefaultUni)
+  -> Vector.Vector (DefaultBuiltinPattern, term)
+  -> PatternMatchM s (HeadSpine Text term (Some (ValueOf DefaultUni)))
+matchDefaultAlternatives rootValue = go True
+  where
+    go
+      :: Bool
+      -> Vector.Vector (DefaultBuiltinPattern, term)
+      -> PatternMatchM s (HeadSpine Text term (Some (ValueOf DefaultUni)))
+    go isFirst remaining = case Vector.uncons remaining of
+      Nothing -> pure $ HeadError "none of the match alternatives matched"
+      Just ((pat, handler), later) -> do
+        let !baseWork = defaultPatternBaseWork pat + if isFirst then 0 else 1
+        spendPatternWork $ PatternWork baseWork
+        let !bindWork = defaultPatternBindWork pat
+        spendPatternWork $ PatternWork bindWork
+        case matchDefaultPattern pat rootValue of
+          Nothing -> go False later
+          Just captures -> pure $ applyCaptures handler captures
+
+    applyCaptures
+      :: term
+      -> DefaultReverseCaptures
+      -> HeadSpine Text term (Some (ValueOf DefaultUni))
+    applyCaptures handler [] = HeadOnly handler
+    applyCaptures handler (finalCapture : previousCaptures) =
+      let materialize
+            :: Spine (Some (ValueOf DefaultUni))
+            -> DefaultReverseCaptures
+            -> Spine (Some (ValueOf DefaultUni))
+          materialize !acc [] = acc
+          materialize !acc (capture : previous) =
+            materialize (SpineCons capture acc) previous
+       in HeadSpine handler $! materialize (SpineLast finalCapture) previousCaptures
+
+matchDefaultPattern
+  :: DefaultBuiltinPattern
+  -> Some (ValueOf DefaultUni)
+  -> Maybe DefaultReverseCaptures
+matchDefaultPattern pat currentValueOf@(Some (ValueOf currentUni currentValue)) = case pat of
+  DefaultPatternWildcard -> Just []
+  DefaultPatternCapture -> Just [currentValueOf]
+  DefaultPatternInteger expected -> case currentUni of
+    DefaultUniInteger
+      | currentValue == toInteger expected -> Just []
+    _ -> Nothing
+  DefaultPatternByteString expected -> case currentUni of
+    DefaultUniByteString
+      | currentValue == expected -> Just []
+    _ -> Nothing
+  DefaultPatternBool expected -> case currentUni of
+    DefaultUniBool
+      | currentValue == expected -> Just []
+    _ -> Nothing
+  DefaultPatternUnit -> case currentUni of
+    DefaultUniUnit -> Just []
+    _ -> Nothing
+  DefaultPatternList fieldEnd fields -> case currentUni of
+    DefaultUniList elemUni -> matchDefaultFields fieldEnd fields elemUni currentValue
+    _ -> Nothing
+  DefaultPatternPair leftField rightField -> case currentUni of
+    DefaultUniPair leftUni rightUni -> case currentValue of
+      (left, right) -> do
+        capturesAfterLeft <- matchDefaultField leftField leftUni left []
+        matchDefaultField rightField rightUni right capturesAfterLeft
+    _ -> Nothing
+  DefaultPatternDataConstr expectedTag fieldEnd fields -> case currentUni of
+    DefaultUniData -> case currentValue of
+      PLC.Constr actualTag values
+        | actualTag == toInteger expectedTag ->
+            matchDefaultFields fieldEnd fields DefaultUniData values
+      _ -> Nothing
+    _ -> Nothing
+  DefaultPatternDataMap fieldEnd fields -> case currentUni of
+    DefaultUniData -> case currentValue of
+      PLC.Map values ->
+        matchDefaultFields
+          fieldEnd
+          fields
+          (DefaultUniPair DefaultUniData DefaultUniData)
+          values
+      _ -> Nothing
+    _ -> Nothing
+  DefaultPatternDataList fieldEnd fields -> case currentUni of
+    DefaultUniData -> case currentValue of
+      PLC.List values -> matchDefaultFields fieldEnd fields DefaultUniData values
+      _ -> Nothing
+    _ -> Nothing
+  DefaultPatternDataI field -> case currentUni of
+    DefaultUniData -> case currentValue of
+      PLC.I integer -> matchDefaultField field DefaultUniInteger integer []
+      _ -> Nothing
+    _ -> Nothing
+  DefaultPatternDataB field -> case currentUni of
+    DefaultUniData -> case currentValue of
+      PLC.B bytes -> matchDefaultField field DefaultUniByteString bytes []
+      _ -> Nothing
+    _ -> Nothing
+
+matchDefaultFields
+  :: DefaultPatternFieldEnd
+  -> Vector.Vector DefaultPatternField
+  -> DefaultUni (Esc a)
+  -> [a]
+  -> Maybe DefaultReverseCaptures
+matchDefaultFields fieldEnd fields elemUni = go fields []
+  where
+    go remainingFields !captures values = case Vector.uncons remainingFields of
+      Nothing -> case fieldEnd of
+        DefaultPatternFieldsExact -> case values of
+          [] -> Just captures
+          _ -> Nothing
+        DefaultPatternFieldsRest -> Just captures
+      Just (field, laterFields) -> case values of
+        [] -> Nothing
+        value : laterValues -> do
+          captures' <- matchDefaultField field elemUni value captures
+          go laterFields captures' laterValues
+
+matchDefaultField
+  :: DefaultPatternField
+  -> DefaultUni (Esc a)
+  -> a
+  -> DefaultReverseCaptures
+  -> Maybe DefaultReverseCaptures
+matchDefaultField field uni value captures = case field of
+  DefaultPatternFieldWildcard -> Just captures
+  DefaultPatternFieldBind -> Just $! someValueOf uni value : captures
+{-# OPAQUE matchDefaultAlternatives #-}
+
+instance MatchBuiltin DefaultUni where
+  type BuiltinPattern DefaultUni = DefaultBuiltinPattern
+  matchBuiltin
+    :: Some (ValueOf DefaultUni)
+    -> Vector.Vector (DefaultBuiltinPattern, term)
+    -> PatternMatchM s (HeadSpine Text term (Some (ValueOf DefaultUni)))
+  matchBuiltin = matchDefaultAlternatives
+  {-# INLINE matchBuiltin #-}
 
 {- Note [Stable encoding of tags]
 'encodeUni' and 'decodeUni' are used for serialisation and deserialisation of types from the

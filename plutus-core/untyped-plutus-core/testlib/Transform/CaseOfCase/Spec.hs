@@ -114,9 +114,10 @@ evaluateUplc = unsafeSplitStructuralOperational . fst <$> evaluateCek noEmitter 
     machineParameters :: DefaultMachineParameters
     machineParameters =
       -- TODO: proper semantic variant. What should def be?
-      MachineParameters def $ mkMachineVariantParameters def costModel
+      MachineParameters def def $ mkMachineVariantParameters def costModel
 
-goldenVsSimplified :: String -> Term Name PLC.DefaultUni PLC.DefaultFun () -> TestTree
+goldenVsSimplified
+  :: String -> Term Name PLC.DefaultUni PLC.DefaultFun () -> TestTree
 goldenVsSimplified testName =
   goldenVsString
     testName

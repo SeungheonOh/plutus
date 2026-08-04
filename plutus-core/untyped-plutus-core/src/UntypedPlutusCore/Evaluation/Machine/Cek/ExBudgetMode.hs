@@ -1,11 +1,13 @@
 -- editorconfig-checker-disable-file
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module UntypedPlutusCore.Evaluation.Machine.Cek.ExBudgetMode
@@ -28,6 +30,8 @@ where
 import PlutusPrelude
 
 import UntypedPlutusCore.Evaluation.Machine.Cek.Internal
+
+import PlutusCore.Builtin (BuiltinPattern)
 
 import PlutusCore.Evaluation.Machine.ExBudget
 import PlutusCore.Evaluation.Machine.ExMemory (ExCPU (..), ExMemory (..))
@@ -124,7 +128,7 @@ instance Pretty RestrictingSt where
 
 -- | For execution, to avoid overruns.
 restricting
-  :: ThrowableBuiltins uni fun
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni))
   => ExRestrictingBudget -> ExBudgetMode RestrictingSt uni fun
 restricting (ExRestrictingBudget initB@(ExBudget cpuInit memInit)) = ExBudgetMode $ do
   -- We keep the counters in a PrimArray. This is better than an STRef since it stores its contents unboxed.
@@ -172,9 +176,13 @@ restricting (ExRestrictingBudget initB@(ExBudget cpuInit memInit)) = ExBudgetMod
   pure $ ExBudgetInfo spender final cumulative
 
 -- | 'restricting' instantiated at 'largeBudget'.
-restrictingLarge :: ThrowableBuiltins uni fun => ExBudgetMode RestrictingSt uni fun
+restrictingLarge
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni))
+  => ExBudgetMode RestrictingSt uni fun
 restrictingLarge = restricting largeBudget
 
 -- | 'restricting' instantiated at 'enormousBudget'.
-restrictingEnormous :: ThrowableBuiltins uni fun => ExBudgetMode RestrictingSt uni fun
+restrictingEnormous
+  :: (ThrowableBuiltins uni fun, Pretty (BuiltinPattern uni))
+  => ExBudgetMode RestrictingSt uni fun
 restrictingEnormous = restricting enormousBudget

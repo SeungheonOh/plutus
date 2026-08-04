@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -25,7 +26,7 @@ import PlutusCore.Flat (Flat)
 import Test.Tasty.Extras ()
 
 instance
-  (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat fun)
+  (PLC.Closed uni, uni `PLC.Everywhere` Flat, Flat fun, Flat (PLC.BuiltinPattern uni))
   => ToUPlc (CompiledCodeIn uni fun a) uni fun
   where
   toUPlc compiledCode = toUPlc =<< catchAll (getPlcNoAnn compiledCode)

@@ -1,0 +1,589 @@
+{
+  "fits": [
+    {
+      "accepted": true,
+      "family": "bytestring-8-byte-chunks",
+      "intercept_ps": 13650.948030028245,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 25148.079384054112,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 25148.079384054112
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 29505.89189159673,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 29505.89189159673
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 114546.09695206385,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 114546.09695206385
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 402751.5854206085,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 402751.5854206085
+        }
+      ],
+      "r_squared": 0.9988017878617989,
+      "rejection_reason": null,
+      "slope_ps": 380.40283935897816,
+      "slope_standard_error_ps": 9.316567909159266,
+      "target": "match_work",
+      "upper_slope_ps": 407.6072176537232
+    },
+    {
+      "accepted": true,
+      "family": "data-b-bounded",
+      "intercept_ps": -216950.08104712283,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 111286.0637673507,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 111286.0637673507
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 361256.8076862851,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 361256.8076862851
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 1439820.9395260643,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 1439820.9395260643
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 7925891.375532545,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 7925891.375532545
+        }
+      ],
+      "r_squared": 0.9955517279758295,
+      "rejection_reason": null,
+      "slope_ps": 7872.099640221129,
+      "slope_standard_error_ps": 372.0825803172187,
+      "target": "match_work",
+      "upper_slope_ps": 8958.580774747408
+    },
+    {
+      "accepted": true,
+      "family": "data-constr-fields",
+      "intercept_ps": 20407.996635359945,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 84846.91032472452,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 84846.91032472452
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 236979.63615437946,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 236979.63615437946
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 975233.1007619641,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 975233.1007619641
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 3775489.3973676832,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 3775489.3973676832
+        }
+      ],
+      "r_squared": 0.9999308412610344,
+      "rejection_reason": null,
+      "slope_ps": 3669.7919544612582,
+      "slope_standard_error_ps": 21.580673658085125,
+      "target": "match_work",
+      "upper_slope_ps": 3732.8075215428667
+    },
+    {
+      "accepted": true,
+      "family": "data-i-bounded",
+      "intercept_ps": -176034.34865411324,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 87782.1906268226,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 87782.1906268226
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 374959.32584699587,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 374959.32584699587
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 1343758.8551796735,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 1343758.8551796735
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 7221912.728078252,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 7221912.728078252
+        }
+      ],
+      "r_squared": 0.996047992333033,
+      "rejection_reason": null,
+      "slope_ps": 7156.287128197203,
+      "slope_standard_error_ps": 318.7436315644077,
+      "target": "match_work",
+      "upper_slope_ps": 8087.018532365273
+    },
+    {
+      "accepted": true,
+      "family": "data-list-fields",
+      "intercept_ps": 17903.204216799466,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 81678.84039919807,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 81678.84039919807
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 238630.92475174268,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 238630.92475174268
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 968978.7240377646,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 968978.7240377646
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 3775431.7295034155,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 3775431.7295034155
+        }
+      ],
+      "r_squared": 0.9999595773556105,
+      "rejection_reason": null,
+      "slope_ps": 3671.4025013418554,
+      "slope_standard_error_ps": 16.505859346639134,
+      "target": "match_work",
+      "upper_slope_ps": 3719.5996106340417
+    },
+    {
+      "accepted": true,
+      "family": "data-map-fields",
+      "intercept_ps": 13996.272727188189,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 80001.73823596694,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 80001.73823596694
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 231807.61856180977,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 231807.61856180977
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 965591.2237924399,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 965591.2237924399
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 3770932.345894918,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 3770932.345894918
+        }
+      ],
+      "r_squared": 0.9999444935667023,
+      "rejection_reason": null,
+      "slope_ps": 3670.843996747339,
+      "slope_standard_error_ps": 19.339028108750753,
+      "target": "match_work",
+      "upper_slope_ps": 3727.3139588248914
+    },
+    {
+      "accepted": true,
+      "family": "entry-integer",
+      "intercept_ps": 168266.32738808356,
+      "points": [
+        {
+          "known_step_delta_ps": -256000.0,
+          "raw_delta_ps": 197605.19738999958,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 453605.1973899996
+        },
+        {
+          "known_step_delta_ps": -1024000.0,
+          "raw_delta_ps": 755233.3218384966,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 1779233.3218384967
+        },
+        {
+          "known_step_delta_ps": -4096000.0,
+          "raw_delta_ps": 3181342.045793275,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 7277342.045793274
+        },
+        {
+          "known_step_delta_ps": -16384000.0,
+          "raw_delta_ps": 10959043.709657123,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 27343043.709657125
+        }
+      ],
+      "r_squared": 0.9997378389863674,
+      "rejection_reason": null,
+      "slope_ps": 26603.05806259306,
+      "slope_standard_error_ps": 304.6193964228372,
+      "target": "match",
+      "upper_slope_ps": 27492.546700147745
+    },
+    {
+      "accepted": true,
+      "family": "field-capture-abandoned",
+      "intercept_ps": -8009.344192133751,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 28998.9618812355,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 28998.9618812355
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 105796.0666743541,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 105796.0666743541
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 455396.64735520934,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 455396.64735520934
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 1870099.1638987602,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 1870099.1638987602
+        }
+      ],
+      "r_squared": 0.999951677763333,
+      "rejection_reason": null,
+      "slope_ps": 1832.5942768956575,
+      "slope_standard_error_ps": 9.00814432033014,
+      "target": "match_work",
+      "upper_slope_ps": 1858.8980583110215
+    },
+    {
+      "accepted": false,
+      "family": "field-capture-success",
+      "intercept_ps": -116455.03634683337,
+      "points": [
+        {
+          "known_step_delta_ps": 256000.0,
+          "raw_delta_ps": 226424.1707570279,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": -29575.829242972104
+        },
+        {
+          "known_step_delta_ps": 1024000.0,
+          "raw_delta_ps": 911479.2657061565,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": -112520.7342938435
+        },
+        {
+          "known_step_delta_ps": 4096000.0,
+          "raw_delta_ps": 3629096.9089994864,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": -466903.09100051364
+        },
+        {
+          "known_step_delta_ps": 16384000.0,
+          "raw_delta_ps": 15645270.10814571,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": -738729.8918542899
+        }
+      ],
+      "r_squared": 0.8536811566337633,
+      "rejection_reason": "negative-slope",
+      "slope_ps": -648.4627948560924,
+      "slope_standard_error_ps": 189.8332783868947,
+      "target": "match_work",
+      "upper_slope_ps": -94.14962196635986
+    },
+    {
+      "accepted": true,
+      "family": "list-fields",
+      "intercept_ps": 14723.542986823712,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 75961.03509703586,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 75961.03509703586
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 236662.39915464344,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 236662.39915464344
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 969149.1455281148,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 969149.1455281148
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 3776067.8060559565,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 3776067.8060559565
+        }
+      ],
+      "r_squared": 0.9999582189751185,
+      "rejection_reason": null,
+      "slope_ps": 3675.6957455062175,
+      "slope_standard_error_ps": 16.800537451383803,
+      "target": "match_work",
+      "upper_slope_ps": 3724.7533148642583
+    },
+    {
+      "accepted": true,
+      "family": "pair-bounded",
+      "intercept_ps": 104237.75907808915,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 146590.2679275866,
+          "units": 32.0,
+          "x": 32.0,
+          "y_ps": 146590.2679275866
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 585768.3617277456,
+          "units": 128.0,
+          "x": 128.0,
+          "y_ps": 585768.3617277456
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 2341940.5893157315,
+          "units": 512.0,
+          "x": 512.0,
+          "y_ps": 2341940.5893157315
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 8371999.441778166,
+          "units": 2048.0,
+          "x": 2048.0,
+          "y_ps": 8371999.441778166
+        }
+      ],
+      "r_squared": 0.9991547323562464,
+      "rejection_reason": null,
+      "slope_ps": 4054.9072148664977,
+      "slope_standard_error_ps": 83.39627846065179,
+      "target": "match_work",
+      "upper_slope_ps": 4298.424347971601
+    },
+    {
+      "accepted": true,
+      "family": "rejected-alternatives",
+      "intercept_ps": -92991.24046029989,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 323365.02159698145,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": 323365.02159698145
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 1154509.932799115,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": 1154509.932799115
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 4367049.210477465,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 4367049.210477465
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 18796004.250284158,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 18796004.250284158
+        }
+      ],
+      "r_squared": 0.9996188764642834,
+      "rejection_reason": null,
+      "slope_ps": 18391.833365440383,
+      "slope_standard_error_ps": 253.93682528044982,
+      "target": "match_work",
+      "upper_slope_ps": 19133.328895259296
+    },
+    {
+      "accepted": false,
+      "family": "rest-suffix",
+      "intercept_ps": 388.08533164696706,
+      "points": [
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": -31.845624787122485,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": -31.845624787122485
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": -246.90423653893808,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": -246.90423653893808
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 1844.5398804055917,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": 1844.5398804055917
+        },
+        {
+          "known_step_delta_ps": 0.0,
+          "raw_delta_ps": 411.534957818816,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": 411.534957818816
+        }
+      ],
+      "r_squared": 0.024118500893167805,
+      "rejection_reason": "audit-only",
+      "slope_ps": 0.31248797816946977,
+      "slope_standard_error_ps": 1.4055351254255173,
+      "target": "audit",
+      "upper_slope_ps": 4.41665054441198
+    },
+    {
+      "accepted": false,
+      "family": "root-capture-success",
+      "intercept_ps": -35117.50629663444,
+      "points": [
+        {
+          "known_step_delta_ps": 256000.0,
+          "raw_delta_ps": 182137.26911967667,
+          "units": 16.0,
+          "x": 16.0,
+          "y_ps": -73862.73088032333
+        },
+        {
+          "known_step_delta_ps": 1024000.0,
+          "raw_delta_ps": 820661.2686846389,
+          "units": 64.0,
+          "x": 64.0,
+          "y_ps": -203338.7313153611
+        },
+        {
+          "known_step_delta_ps": 4096000.0,
+          "raw_delta_ps": 3057082.9684988633,
+          "units": 256.0,
+          "x": 256.0,
+          "y_ps": -1038917.0315011367
+        },
+        {
+          "known_step_delta_ps": 16384000.0,
+          "raw_delta_ps": 12740870.701866465,
+          "units": 1024.0,
+          "x": 1024.0,
+          "y_ps": -3643129.2981335353
+        }
+      ],
+      "r_squared": 0.9983615591245123,
+      "rejection_reason": "negative-slope",
+      "slope_ps": -3543.2189460616314,
+      "slope_standard_error_ps": 101.49729158797561,
+      "target": "match_work",
+      "upper_slope_ps": -3246.8468546247427
+    }
+  ],
+  "known_costs": {
+    "case": 16000.0,
+    "lam_abs": 16000.0
+  },
+  "minimum_r_squared": 0.95,
+  "recommendations": {
+    "match": 27493,
+    "match_work": 19134
+  },
+  "selection_rule": "ceil(max accepted one-sided-95%-upper slope)",
+  "units": "picoseconds"
+}

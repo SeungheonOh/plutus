@@ -65,11 +65,11 @@ We use the following example to explain how the implementation works:
 
 The implementation makes several passes on the given term.
 
-In the first pass, we assign a unique ID to each `LamAbs`, `Delay`, and each `Case` branch.
+In the first pass, we assign a unique ID to each `LamAbs`, `Delay`, and each `Case` or `Match` branch.
 Then, we annotate each subterm with a path, consisting of IDs encountered from the root
 to that subterm (not including itself). The reason to do this is because `LamAbs`, `Delay`,
-and `Case` branches represent places where computation stops, i.e., subexpressions are not
-immediately evaluated, and may not be evaluated at all.
+and `Case` or `Match` branches represent places where computation stops, i.e., subexpressions are
+not immediately evaluated, and may not be evaluated at all.
 
 In the above example, the ID of `\x` is 0, the ID of `\y` is 1, and the IDs of the
 three case branches are 2, 3, 4 (the actual numbers don't matter, as long as they are unique).
@@ -245,7 +245,9 @@ annotate = flip evalState 0 . flip runReaderT [] . go
   where
     -- The integer state is the highest ID assigned so far.
     -- The reader context is the current path.
-    go :: Term name uni fun ann -> ReaderT Path (State Int) (Term name uni fun (Path, ann))
+    go
+      :: Term name uni fun ann
+      -> ReaderT Path (State Int) (Term name uni fun (Path, ann))
     go t = do
       path <- ask
       case t of
@@ -269,6 +271,15 @@ annotate = flip evalState 0 . flip runReaderT [] . go
           freshId <- (+ 1) <$> lift get
           lift $ put freshId
           Delay (path, ann) <$> local (freshId :) (go body)
+        Match ann scrut alternatives ->
+          Match (path, ann)
+            <$> go scrut
+            <*> ( for alternatives $ \(pat, handler) -> do
+                    freshId <- (+ 1) <$> lift get
+                    lift $ put freshId
+                    handler' <- local (freshId :) (go handler)
+                    pure (pat, handler')
+                )
         Case ann scrut branches ->
           Case (path, ann)
             <$> go scrut
@@ -322,8 +333,12 @@ countOccs whichSubterms builtinSemanticsVariant =
     addOrSkip
       , addToMap
         :: Term name uni fun (Path, ann)
-        -> HashMap (Term name uni fun ()) [(Path, Term name uni fun (Path, ann), Int)]
-        -> HashMap (Term name uni fun ()) [(Path, Term name uni fun (Path, ann), Int)]
+        -> HashMap
+             (Term name uni fun ())
+             [(Path, Term name uni fun (Path, ann), Int)]
+        -> HashMap
+             (Term name uni fun ())
+             [(Path, Term name uni fun (Path, ann), Int)]
 
     addOrSkip t0
       | isWorkFree' builtinSemanticsVariant t0 = id
@@ -387,7 +402,9 @@ applyCse candidate = mkLamApp . transformOf termSubterms substCseVarForTerm
   where
     candidatePath = fst (getAnn (ccAnnotatedTerm candidate))
 
-    substCseVarForTerm :: Term Name uni fun (Path, ann) -> Term Name uni fun (Path, ann)
+    substCseVarForTerm
+      :: Term Name uni fun (Path, ann)
+      -> Term Name uni fun (Path, ann)
     substCseVarForTerm t =
       if currTerm == ccTerm candidate && candidatePath `isAncestorOrSelf` currPath
         then Var (getAnn t) (ccFreshName candidate)
@@ -410,12 +427,17 @@ applyCse candidate = mkLamApp . transformOf termSubterms substCseVarForTerm
           Error ann -> Error ann
           Constr ann i ts -> Constr ann i (mkLamApp <$> ts)
           Case ann scrut branches -> Case ann (mkLamApp scrut) (mkLamApp <$> branches)
+          Match ann scrut alternatives ->
+            Match ann (mkLamApp scrut) $
+              fmap (\(pat, handler) -> (pat, mkLamApp handler)) alternatives
       | otherwise = t
       where
         currPath = fst (getAnn t)
 
         -- See Note [CSE and immediately applied lambdas]
-        placeCseBinding :: Term Name uni fun (Path, ann) -> Term Name uni fun (Path, ann)
+        placeCseBinding
+          :: Term Name uni fun (Path, ann)
+          -> Term Name uni fun (Path, ann)
         placeCseBinding node = case node of
           -- Immediately applied lambda: if `arg` does not use `cseName`, we'd want to be sure
           -- to descend into the *body* of the lambda.
@@ -443,6 +465,10 @@ applyCse candidate = mkLamApp . transformOf termSubterms substCseVarForTerm
                 -- Descend into the scrutinee, if no branch uses `cseName`.
                 Case ann (placeCseBinding scrut) branches
             | otherwise -> wrapWithCse node
+          Match ann scrut alternatives
+            | not (any (cseName `occursIn`) (snd <$> alternatives)) ->
+                Match ann (placeCseBinding scrut) alternatives
+            | otherwise -> wrapWithCse node
           _ -> wrapWithCse node
           where
             cseName = ccFreshName candidate
@@ -463,6 +489,7 @@ occursIn n = go
       Delay _ t -> go t
       Constr _ _ ts -> any go ts
       Case _ scrut branches -> go scrut || any go branches
+      Match _ scrut alternatives -> go scrut || any (go . snd) alternatives
       _ -> False
 
 -- | Generate a fresh variable for the common subexpression.

@@ -1,4 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main (main) where
@@ -129,7 +131,8 @@ data BudgetMode
 data SomeBudgetMode
   = forall cost.
     (Eq cost, NFData cost, PrintBudgetState cost) =>
-    SomeBudgetMode (Cek.ExBudgetMode cost PLC.DefaultUni PLC.DefaultFun)
+    SomeBudgetMode
+      (Cek.ExBudgetMode cost PLC.DefaultUni PLC.DefaultFun)
 
 data EvalOptions
   = EvalOptions
@@ -596,7 +599,11 @@ execCertifier
   -> CertName
   -> CertifierOutput
   -> [ ( Maybe
-           (Cek.CekEvaluationException UPLC.NamedDeBruijn UPLC.DefaultUni UPLC.DefaultFun)
+           ( Cek.CekEvaluationException
+               UPLC.NamedDeBruijn
+               UPLC.DefaultUni
+               UPLC.DefaultFun
+           )
        , ExBudget
        )
      ]
@@ -927,7 +934,7 @@ instance D.Breakpointable DAnn MaybeBreakpoint where
 
 -- Peel off one layer
 handleDbg
-  :: Cek.ThrowableBuiltins uni fun
+  :: (Cek.ThrowableBuiltins uni fun, Pretty (UPLC.BuiltinPattern uni))
   => D.CekTrans uni fun DAnn RealWorld
   -> D.DebugF uni fun DAnn MaybeBreakpoint (Repl.InputT IO ())
   -> Repl.InputT IO ()

@@ -23,6 +23,7 @@ module UntypedPlutusCore.Purity
 import Data.DList qualified as DList
 import Data.Typeable (Proxy (..))
 import PlutusCore.Arity (Param (..), builtinArity)
+import PlutusCore.Builtin (BuiltinPattern)
 import PlutusCore.Builtin.Meaning (ToBuiltinMeaning (..))
 import PlutusCore.Pretty (Pretty (pretty), PrettyBy (prettyBy))
 import Prettyprinter (vsep, (<+>))
@@ -57,6 +58,7 @@ instance
   ( Show name
   , Everywhere uni Show
   , Show fun
+  , Show (BuiltinPattern uni)
   , Show a
   , GShow uni
   , Closed uni
@@ -212,6 +214,10 @@ termEvaluationOrder builtinSemanticsVariant = goTerm
           -- then the whole term, which means finding the case so work
           <> evalThis (EvalTerm Pure MaybeWork t)
           -- then we go to an unknown scrutinee
+          <> evalThis Unknown
+      t@(Match _ scrut _) ->
+        goTerm scrut
+          <> evalThis (EvalTerm Pure MaybeWork t)
           <> evalThis Unknown
       -- Leaf terms
       t@Var {} ->

@@ -83,6 +83,7 @@ safeLiftWith
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => (PIR.CompilationOpts () -> PIR.CompilationOpts ())
   -- ^ Modifier of PIR compilation options
@@ -134,6 +135,7 @@ safeLift
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -157,6 +159,7 @@ safeLiftUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -185,6 +188,7 @@ safeLiftProgram
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -207,6 +211,7 @@ safeLiftProgramUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -227,6 +232,7 @@ safeLiftCode
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version -> a -> m (CompiledCodeIn uni fun a)
 safeLiftCode v =
@@ -252,6 +258,7 @@ safeLiftCodeUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version -> a -> m (CompiledCodeIn uni fun a)
 safeLiftCodeUnopt v =
@@ -284,6 +291,7 @@ lift
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -303,6 +311,7 @@ liftUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -321,6 +330,7 @@ liftProgram
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -340,6 +350,7 @@ liftProgramUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version
   -> a
@@ -351,7 +362,11 @@ liftProgramDef
   :: Lift.Lift PLC.DefaultUni a
   => a
   -> ( PIR.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ()
-     , UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
+     , UPLC.Program
+         UPLC.NamedDeBruijn
+         PLC.DefaultUni
+         PLC.DefaultFun
+         ()
      )
 liftProgramDef = liftProgram PLC.latestVersion
 
@@ -361,7 +376,11 @@ liftProgramDefUnopt
   :: Lift.Lift PLC.DefaultUni a
   => a
   -> ( PIR.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ()
-     , UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
+     , UPLC.Program
+         UPLC.NamedDeBruijn
+         PLC.DefaultUni
+         PLC.DefaultFun
+         ()
      )
 liftProgramDefUnopt = liftProgramUnopt PLC.latestVersion
 
@@ -377,6 +396,7 @@ liftCode
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version -> a -> CompiledCodeIn uni fun a
 liftCode v x = unsafely $ safeLiftCode v x
@@ -394,6 +414,7 @@ liftCodeUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => PLC.Version -> a -> CompiledCodeIn uni fun a
 liftCodeUnopt v x = unsafely $ safeLiftCodeUnopt v x
@@ -410,6 +431,7 @@ liftCodeDef
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => a -> CompiledCodeIn uni fun a
 liftCodeDef = liftCode PLC.latestVersion
@@ -427,6 +449,7 @@ liftCodeDefUnopt
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => a -> CompiledCodeIn uni fun a
 liftCodeDefUnopt = liftCodeUnopt PLC.latestVersion
@@ -499,6 +522,7 @@ typeCode
      , Default (PIR.BuiltinsInfo uni fun)
      , Default (PIR.RewriteRules uni fun)
      , Hashable fun
+     , Hashable (PLC.BuiltinPattern uni)
      )
   => Proxy a
   -> PLC.Program PLC.TyName PLC.Name uni fun ()
