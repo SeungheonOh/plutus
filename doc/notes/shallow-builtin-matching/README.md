@@ -15,14 +15,16 @@ The final CEK cost model has only two Match costs:
 
 | Step | CPU | Memory | Meaning |
 |---|---:|---:|---|
-| `BMatch` | 27,493 | 200 | Enter `Match` and perform the first bounded root probe |
-| `BMatchWork` | 19,134 | 100 | One conservative variable-work unit |
+| `BMatch` | 27,190 | 200 | Enter `Match` and perform the first bounded root probe |
+| `BMatchWork` | 17,310 | 100 | One variable-work unit |
 
-The CPU constants are the ceiling of the largest accepted one-sided 95% upper slope from three
-complete calibration passes. Memory is a deliberately simple logical policy: retain the previous
-high-memory Match envelope (200) and charge the standard CEK memory quantum (100) per variable
-unit, so every additional bind is represented. Criterion measures time, not Plutus `ExMemory`, so
-the memory numbers are policy values rather than a conversion from host heap bytes.
+The revised CPU constants retain the larger one-sided 95% upper slope from the closely agreeing
+limiting fits in calibration runs 2 and 3. The first pass remains documented below; its largest
+rejected-alternative point was 7.4–8.2% above those two points and was not used as the final
+envelope. This deliberately lowers the fixed/work prices by 1.10%/9.53% without rerunning any
+benchmark. Memory remains a simple logical policy: 200 for Match and 100 per variable unit.
+Criterion measures time, not Plutus `ExMemory`, so these are policy values rather than conversions
+from host heap bytes.
 
 The comparison evaluated 27 nested `Data` shapes in 270 isolated CPU processes (27 cases × 2
 implementations × 5 repeats), and also counted each case once with each implementation's production
@@ -31,15 +33,20 @@ cost model.
 | Aggregate result | Shallow / nested | Interpretation |
 |---|---:|---|
 | CPU time, geometric mean | 1.052 | Shallow was 5.2% slower overall |
-| Execution-budget CPU, geometric mean | 0.888 | Shallow used 11.2% less budget CPU overall |
+| Execution-budget CPU, geometric mean | 0.837 | Shallow uses 16.3% less budget CPU overall |
 | Execution-budget memory, geometric mean | 2.287 | Shallow used 2.29× logical budget memory |
 | Cases with lower shallow wall time | 15 / 27 | The result depends strongly on depth and width |
+| Cases with lower revised shallow CPU budget | 21 / 27 | Six width-16 cases still favor nestable |
 
-Shallow matching won all nine depth-1 cases and all nine width-16 cases. It lost the narrow/deep
-cases because lowering performs one `Match` per level (and one extra Pair `Match` at each map level),
-whereas the nestable implementation walks the whole pattern under one AST `Match`. The widest cases
-reverse that result: the shallow field loops are simpler enough to offset the additional Match
-nodes.
+Shallow matching won wall time in all nine depth-1 cases and all nine width-16 cases. It lost the
+narrow/deep cases because lowering performs one `Match` per level (and one extra Pair `Match` at
+each map level), whereas the nestable implementation walks the whole pattern under one AST `Match`.
+The widest cases reverse that result: the shallow field loops are simpler enough to offset the
+additional Match nodes.
+
+The detailed execution-budget derivation, including exact dynamic-count equations, category
+decomposition, crossover widths, all 27 revised rows, and current Cardano transaction limits, is in
+[EXECUTION-BUDGET-COMPARISON.md](EXECUTION-BUDGET-COMPARISON.md).
 
 ## Provenance and isolation
 
@@ -265,14 +272,46 @@ excluded. The abandoned-capture family isolates capture retention without handle
 remains positive and highly linear. The rest-suffix slope is statistically negligible relative to
 the selected quantum and never participates in cost selection.
 
-The final CPU values are therefore:
+The initial cost selection took the largest upper bound across every pass: 27,493/19,134. A later
+adversarial review motivated a less conservative cross-run policy. At 1,024 rejected alternatives,
+run 1's adjusted time was 18,796,004 ps, versus 17,504,970 and 17,372,406 ps in runs 2 and 3. The
+stable pair differed by 0.76%; run 1 was 7.38–8.19% higher. Its work-slope standard error was also
+253.94 ps, versus 97.44/114.91 ps. The fixed-slope standard errors show the same ordering
+(304.62 versus 95.15/46.60 ps).
+
+No contemporaneous process inventory or CPU-isolation log was captured, so the report cannot prove
+whether another host process, frequency state, or another source caused that first-pass difference.
+The revision does not erase it. Instead, the selection rule is now explicit: take the ceiling of the
+larger one-sided 95% upper slope from the closely agreeing limiting fits in runs 2 and 3. This is a
+post-hoc cross-run choice. The one-sided bounds describe uncertainty within each fit; they do not
+provide 95% coverage over host-state variation between runs.
+
+The revised CPU values are therefore:
 
 ```text
-cekMatchCost.exBudgetCPU     = ceil(27492.5467) = 27493
-cekMatchWorkCost.exBudgetCPU = ceil(19133.3289) = 19134
+cekMatchCost.exBudgetCPU     = ceil(max(27125.9235, 27189.0984)) = 27190
+cekMatchWorkCost.exBudgetCPU = ceil(max(17309.9338, 17222.3259)) = 17310
 ```
 
-All five A–E CEK JSON files contain the same two Match constants.
+This is an aggressive selected-fit calibration, not an upper envelope over every observed wall-time
+pass. Some adversarial failed-alternative cases imply per-work medians around 17.7–19.0 ns. The
+safety argument therefore also relies on the unchanged 200/100 memory charges and Cardano's active
+per-transaction limit of 10,000,000,000 CPU / 16,500,000 memory. Memory caps an idealized pure
+`BMatch` stream at 82,500 accounted charges and a pure `BMatchWork` stream at 165,000 accounted
+units, well before the new CPU prices would bind. Bounded CEK cost slippage can execute up to 199
+additional accumulated machine steps before the next spend. At the largest stored one-sided upper
+slopes, the idealized accounting ceilings represent about 2.27 ms and 3.16 ms of calibrated
+Criterion time on this host. Real programs spend additional CEK memory; mixed CPU-limited programs
+need not have the same Match ceiling.
+
+The 5.292638 ms adversarial wall maximum was not used to scale the constants. It occurred in one of
+5,000 steady samples for `wide-bind-too-short`; that process's maximum CPU sample was only
+0.720238 ms and its wall p99 was 0.133159 ms. The gap is scheduler interruption, not matcher CPU.
+The corpus-wide CPU maximum was 2.324943 ms in capture materialization. Benchmark processes were
+run sequentially and pinned, but the CPU was not shielded from unrelated system work.
+
+No timing benchmark was rerun for this revision. All five A–E CEK JSON files contain the same two
+revised constants.
 
 ### Rejected pilot data and benchmark validity fixes
 
@@ -327,6 +366,17 @@ Execution budgets are deterministic production-parameter runs. The shared CSV sc
 CPU/memory plus `BMatch`/`BMatchWork` for shallow and the older
 `BMatch`/`BPattern`/`BStructural`/`BMatchNext` counts for nested.
 
+The tracked budget CSV preserves the original 27,493/19,134 shallow prices. The budget ratios below
+use the revised 27,190/17,310 prices and were obtained offline from the stored dynamic counts:
+
+```text
+revised CPU = recorded CPU - 303 * BMatch - 1824 * BMatchWork
+```
+
+This is exact repricing; no evaluator or timing benchmark was rerun. See the dedicated
+[execution-budget comparison](EXECUTION-BUDGET-COMPARISON.md) for the derivation and original-versus-
+revised results.
+
 ## Comparison results
 
 All ratios below are shallow divided by nested; values below 1 favor shallow.
@@ -335,70 +385,71 @@ All ratios below are shallow divided by nested; values below 1 favor shallow.
 
 | Family | Shallow faster | Time S/N | Shallow speedup | Budget CPU S/N | Budget memory S/N |
 |---|---:|---:|---:|---:|---:|
-| `alternating` | 5/9 | 1.067 | 0.937× | 0.914 | 2.354 |
-| `constr` | 5/9 | 1.043 | 0.959× | 0.875 | 2.254 |
-| `list` | 5/9 | 1.046 | 0.956× | 0.875 | 2.254 |
+| `alternating` | 5/9 | 1.067 | 0.937× | 0.862 | 2.354 |
+| `constr` | 5/9 | 1.043 | 0.959× | 0.825 | 2.254 |
+| `list` | 5/9 | 1.046 | 0.956× | 0.825 | 2.254 |
 
 ### By depth
 
 | Depth | Shallow faster | Time S/N | Shallow speedup | Budget CPU S/N | Budget memory S/N |
 |---:|---:|---:|---:|---:|---:|
-| 1 | 9/9 | 0.907 | 1.102× | 0.845 | 1.532 |
-| 4 | 3/9 | 1.067 | 0.938× | 0.899 | 2.384 |
-| 16 | 3/9 | 1.204 | 0.831× | 0.920 | 3.273 |
+| 1 | 9/9 | 0.907 | 1.102× | 0.800 | 1.532 |
+| 4 | 3/9 | 1.067 | 0.938× | 0.847 | 2.384 |
+| 16 | 3/9 | 1.204 | 0.831× | 0.865 | 3.273 |
 
 ### By width
 
 | Width | Shallow faster | Time S/N | Shallow speedup | Budget CPU S/N | Budget memory S/N |
 |---:|---:|---:|---:|---:|---:|
-| 1 | 3/9 | 1.209 | 0.827× | 0.740 | 2.804 |
-| 4 | 3/9 | 1.093 | 0.915× | 0.860 | 2.271 |
-| 16 | 9/9 | 0.882 | 1.134× | 1.099 | 1.879 |
+| 1 | 3/9 | 1.209 | 0.827× | 0.711 | 2.804 |
+| 4 | 3/9 | 1.093 | 0.915× | 0.813 | 2.271 |
+| 16 | 9/9 | 0.882 | 1.134× | 1.015 | 1.879 |
 
 ### Every case
 
 | Case | Shallow CPU (µs) | Nested CPU (µs) | Time S/N | Budget CPU S/N | Budget memory S/N |
 |---|---:|---:|---:|---:|---:|
-| `alternating-d1-w1` | 0.349 | 0.369 | 0.947 | 0.725 | 1.496 |
-| `alternating-d1-w4` | 0.362 | 0.390 | 0.926 | 0.813 | 1.523 |
-| `alternating-d1-w16` | 0.396 | 0.469 | 0.843 | 1.024 | 1.580 |
-| `alternating-d4-w1` | 0.574 | 0.467 | 1.229 | 0.793 | 3.044 |
-| `alternating-d4-w4` | 0.636 | 0.571 | 1.114 | 0.906 | 2.549 |
-| `alternating-d4-w16` | 0.802 | 0.884 | 0.907 | 1.132 | 2.028 |
-| `alternating-d16-w1` | 1.547 | 1.003 | 1.543 | 0.822 | 5.224 |
-| `alternating-d16-w4` | 1.778 | 1.387 | 1.282 | 0.942 | 3.375 |
-| `alternating-d16-w16` | 2.669 | 2.703 | 0.987 | 1.167 | 2.221 |
-| `constr-d1-w1` | 0.349 | 0.369 | 0.946 | 0.725 | 1.496 |
-| `constr-d1-w4` | 0.362 | 0.390 | 0.928 | 0.813 | 1.523 |
-| `constr-d1-w16` | 0.396 | 0.468 | 0.845 | 1.024 | 1.580 |
-| `constr-d4-w1` | 0.545 | 0.442 | 1.232 | 0.720 | 2.771 |
-| `constr-d4-w4` | 0.589 | 0.523 | 1.127 | 0.857 | 2.347 |
-| `constr-d4-w16` | 0.733 | 0.836 | 0.877 | 1.116 | 1.935 |
-| `constr-d16-w1` | 1.223 | 0.830 | 1.473 | 0.718 | 5.121 |
-| `constr-d16-w4` | 1.408 | 1.130 | 1.246 | 0.877 | 3.095 |
-| `constr-d16-w16` | 2.165 | 2.454 | 0.882 | 1.149 | 2.094 |
-| `list-d1-w1` | 0.346 | 0.363 | 0.954 | 0.725 | 1.496 |
-| `list-d1-w4` | 0.358 | 0.383 | 0.933 | 0.813 | 1.523 |
-| `list-d1-w16` | 0.393 | 0.462 | 0.851 | 1.024 | 1.580 |
-| `list-d4-w1` | 0.517 | 0.425 | 1.218 | 0.720 | 2.771 |
-| `list-d4-w4` | 0.564 | 0.505 | 1.116 | 0.857 | 2.347 |
-| `list-d4-w16` | 0.710 | 0.816 | 0.870 | 1.116 | 1.935 |
-| `list-d16-w1` | 1.179 | 0.766 | 1.538 | 0.718 | 5.121 |
-| `list-d16-w4` | 1.323 | 1.069 | 1.237 | 0.877 | 3.095 |
-| `list-d16-w16` | 2.116 | 2.401 | 0.881 | 1.149 | 2.094 |
+| `alternating-d1-w1` | 0.349 | 0.369 | 0.947 | 0.698 | 1.496 |
+| `alternating-d1-w4` | 0.362 | 0.390 | 0.926 | 0.772 | 1.523 |
+| `alternating-d1-w16` | 0.396 | 0.469 | 0.843 | 0.952 | 1.580 |
+| `alternating-d4-w1` | 0.574 | 0.467 | 1.229 | 0.760 | 3.044 |
+| `alternating-d4-w4` | 0.636 | 0.571 | 1.114 | 0.855 | 2.549 |
+| `alternating-d4-w16` | 0.802 | 0.884 | 0.907 | 1.045 | 2.028 |
+| `alternating-d16-w1` | 1.547 | 1.003 | 1.543 | 0.787 | 5.224 |
+| `alternating-d16-w4` | 1.778 | 1.387 | 1.282 | 0.888 | 3.375 |
+| `alternating-d16-w16` | 2.669 | 2.703 | 0.987 | 1.076 | 2.221 |
+| `constr-d1-w1` | 0.349 | 0.369 | 0.946 | 0.698 | 1.496 |
+| `constr-d1-w4` | 0.362 | 0.390 | 0.928 | 0.772 | 1.523 |
+| `constr-d1-w16` | 0.396 | 0.468 | 0.845 | 0.952 | 1.580 |
+| `constr-d4-w1` | 0.545 | 0.442 | 1.232 | 0.692 | 2.771 |
+| `constr-d4-w4` | 0.589 | 0.523 | 1.127 | 0.808 | 2.347 |
+| `constr-d4-w16` | 0.733 | 0.836 | 0.877 | 1.029 | 1.935 |
+| `constr-d16-w1` | 1.223 | 0.830 | 1.473 | 0.689 | 5.121 |
+| `constr-d16-w4` | 1.408 | 1.130 | 1.246 | 0.824 | 3.095 |
+| `constr-d16-w16` | 2.165 | 2.454 | 0.882 | 1.056 | 2.094 |
+| `list-d1-w1` | 0.346 | 0.363 | 0.954 | 0.698 | 1.496 |
+| `list-d1-w4` | 0.358 | 0.383 | 0.933 | 0.772 | 1.523 |
+| `list-d1-w16` | 0.393 | 0.462 | 0.851 | 0.952 | 1.580 |
+| `list-d4-w1` | 0.517 | 0.425 | 1.218 | 0.692 | 2.771 |
+| `list-d4-w4` | 0.564 | 0.505 | 1.116 | 0.808 | 2.347 |
+| `list-d4-w16` | 0.710 | 0.816 | 0.870 | 1.029 | 1.935 |
+| `list-d16-w1` | 1.179 | 0.766 | 1.538 | 0.689 | 5.121 |
+| `list-d16-w4` | 1.323 | 1.069 | 1.237 | 0.824 | 3.095 |
+| `list-d16-w16` | 2.116 | 2.401 | 0.881 | 1.056 | 2.094 |
 
 The best shallow wall-time ratio is 0.843 (`alternating-d1-w16`, 15.7% less time). The worst is
-1.543 (`alternating-d16-w1`, 54.3% more time). The shallow budget-CPU ratio ranges from 0.718
-(`constr-d16-w1`) to 1.167 (`alternating-d16-w16`). Logical budget-memory ratios range from 1.496
+1.543 (`alternating-d16-w1`, 54.3% more time). The revised shallow budget-CPU ratio ranges from
+0.689 (`constr-d16-w1` and `list-d16-w1`) to 1.076 (`alternating-d16-w16`). Logical
+budget-memory ratios range from 1.496
 to 5.224.
 
 The deepest/widest exact budgets illustrate the tradeoff:
 
 | Case | Implementation | Budget CPU | Budget memory | Match | Work/pattern/structural |
 |---|---|---:|---:|---:|---|
-| constr/list d16 w16 | shallow | 6,270,197 | 34,400 | 17 | 274 work |
+| constr/list d16 w16 | shallow | 5,765,270 | 34,400 | 17 | 274 work |
 | constr/list d16 w16 | nested | 5,457,916 | 16,431 | 2 | 211 pattern, 257 structural |
-| alternating d16 w16 | shallow | 6,854,672 | 37,900 | 22 | 289 work |
+| alternating d16 w16 | shallow | 6,320,870 | 37,900 | 22 | 289 work |
 | alternating d16 w16 | nested | 5,872,676 | 17,061 | 2 | 241 pattern, 267 structural |
 
 The CPU-time result and execution-budget result answer different questions. Wall time measures these
@@ -502,6 +553,7 @@ order and never ran two benchmark processes concurrently.
 
 ## Artifacts
 
+- [Detailed execution-budget comparison](EXECUTION-BUDGET-COMPARISON.md)
 - [Calibration metadata](results/calibration-metadata.csv)
 - [Calibration run 1](results/calibration-run-1.csv) and
   [fit 1](results/calibration-fit-run-1.json)
@@ -524,8 +576,10 @@ deviation, repeat number, and pair order for every process.
   ledger-activated feature.
 - CPU constants and wall-time comparisons are host/toolchain specific; the complete raw data makes
   recalibration on the production reference machine straightforward.
-- The one work quantum is intentionally conservative. Failed-alternative dispatch determines it,
-  while field and byte work are substantially cheaper.
+- The one work quantum is selected from the closely agreeing failed-alternative fits in runs 2 and
+  3. It remains much
+  higher than field and byte work, but it is not an upper envelope over the anomalous first pass or
+  every adversarial host observation; on-chain safety also depends on the unchanged memory charge.
 - `ExMemory` values are simple logical policy constants, not inferred from Criterion wall time or
   host RSS.
 - The comparison uses controlled synthetic nested `Data` shapes. It isolates deconstruction but is
