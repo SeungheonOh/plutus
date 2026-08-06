@@ -108,10 +108,6 @@ match_benchmark_constr_flat_d1_w1_c1_nested =
         patternRoot = constrNode 1 1 scalarPattern []
      in patternRoot
 
-match_benchmark_constr_flat_d1_w1_c1_matcher :: Term
-match_benchmark_constr_flat_d1_w1_c1_matcher =
-  match_benchmark_constr_flat_d1_w1_c1_nested
-
 -- Match: Constr 1 [I @, _, ..., I @, _, ..., I @, _, ..., I @] => 34.
 match_benchmark_constr_flat_d1_w16_c4_nested :: Term
 match_benchmark_constr_flat_d1_w16_c4_nested =
@@ -123,10 +119,6 @@ match_benchmark_constr_flat_d1_w16_c4_nested =
           capturedIntegerPattern $ toInteger (fieldIndex + 1) `elem` captureValues
         patternRoot = constrNode 16 1 scalarPattern []
      in patternRoot
-
-match_benchmark_constr_flat_d1_w16_c4_matcher :: Term
-match_benchmark_constr_flat_d1_w16_c4_matcher =
-  match_benchmark_constr_flat_d1_w16_c4_nested
 
 -- Match: Constr 1 [_, ..., I @, _, _, _] => 997.
 match_benchmark_constr_flat_d1_w1000_c1_nested :: Term
@@ -140,10 +132,6 @@ match_benchmark_constr_flat_d1_w1000_c1_nested =
         patternRoot = constrNode 1000 1 scalarPattern []
      in patternRoot
 
-match_benchmark_constr_flat_d1_w1000_c1_matcher :: Term
-match_benchmark_constr_flat_d1_w1000_c1_matcher =
-  match_benchmark_constr_flat_d1_w1000_c1_nested
-
 -- Match: Constr 1 [...] with I @ at f[6,60,117,...,976,999] => 8452.
 match_benchmark_constr_flat_d1_w1000_c16_nested :: Term
 match_benchmark_constr_flat_d1_w1000_c16_nested =
@@ -155,10 +143,6 @@ match_benchmark_constr_flat_d1_w1000_c16_nested =
           capturedIntegerPattern $ toInteger (fieldIndex + 1) `elem` captureValues
         patternRoot = constrNode 1000 1 scalarPattern []
      in patternRoot
-
-match_benchmark_constr_flat_d1_w1000_c16_matcher :: Term
-match_benchmark_constr_flat_d1_w1000_c16_matcher =
-  match_benchmark_constr_flat_d1_w1000_c16_nested
 
 -- Match: Constr 1 [Constr 2 [Constr 3 [Constr 4 [...],...],...],...];
 --        captures I[2,15,21,28,40,47,51,62] => 266.
@@ -185,10 +169,6 @@ match_benchmark_constr_spine_front_d4_w16_c8_nested =
         patternRoot = go 1 childPositions
      in patternRoot
 
-match_benchmark_constr_spine_front_d4_w16_c8_matcher :: Term
-match_benchmark_constr_spine_front_d4_w16_c8_matcher =
-  match_benchmark_constr_spine_front_d4_w16_c8_nested
-
 -- Match: Constr 1 [...,Constr 2 [...,Constr 3 [...,Constr 4 [...],...],...],...];
 --        captures I[2,15,21,28,40,47,51,62] => 266.
 match_benchmark_constr_spine_middle_d4_w16_c8_nested :: Term
@@ -213,10 +193,6 @@ match_benchmark_constr_spine_middle_d4_w16_c8_nested =
 
         patternRoot = go 1 childPositions
      in patternRoot
-
-match_benchmark_constr_spine_middle_d4_w16_c8_matcher :: Term
-match_benchmark_constr_spine_middle_d4_w16_c8_matcher =
-  match_benchmark_constr_spine_middle_d4_w16_c8_nested
 
 -- Match: Constr 1 [...,Constr 2 [...,Constr 3 [...,Constr 4 [...]]]];
 --        captures I[2,15,21,28,40,47,51,62] => 266.
@@ -243,10 +219,6 @@ match_benchmark_constr_spine_last_d4_w16_c8_nested =
         patternRoot = go 1 childPositions
      in patternRoot
 
-match_benchmark_constr_spine_last_d4_w16_c8_matcher :: Term
-match_benchmark_constr_spine_last_d4_w16_c8_matcher =
-  match_benchmark_constr_spine_last_d4_w16_c8_nested
-
 -- Match: Constr 1 [...,Constr 2 [...,Constr 3 [...,Constr 4 [...],...],...],...];
 --        captures I[2,15,21,28,40,47,51,62] => 266.
 match_benchmark_constr_spine_irregular_d4_w16_c8_nested :: Term
@@ -271,10 +243,6 @@ match_benchmark_constr_spine_irregular_d4_w16_c8_nested =
 
         patternRoot = go 1 childPositions
      in patternRoot
-
-match_benchmark_constr_spine_irregular_d4_w16_c8_matcher :: Term
-match_benchmark_constr_spine_irregular_d4_w16_c8_matcher =
-  match_benchmark_constr_spine_irregular_d4_w16_c8_nested
 
 -- Match: Constr 1 [Constr 2 [...Constr 3 [...Constr 4 [...Constr 5
 --        [...Constr 6 [...Constr 7 [...Constr 8 [...]]]]]]],...]; captures I[4,12,...,52,61] => 257.
@@ -301,10 +269,6 @@ match_benchmark_constr_spine_irregular_d8_w8_c8_nested =
         patternRoot = go 1 childPositions
      in patternRoot
 
-match_benchmark_constr_spine_irregular_d8_w8_c8_matcher :: Term
-match_benchmark_constr_spine_irregular_d8_w8_c8_matcher =
-  match_benchmark_constr_spine_irregular_d8_w8_c8_nested
-
 -- Match: Constr n [Constr (n+1) [...], _/I @] (n=1..63);
 --        Constr 64 [_,I @]; I @ at n=[1,10,19,28,37,46,55,64] => 520.
 match_benchmark_constr_spine_front_d64_w2_c8_nested :: Term
@@ -329,10 +293,6 @@ match_benchmark_constr_spine_front_d64_w2_c8_nested =
 
         patternRoot = go 1 childPositions
      in patternRoot
-
-match_benchmark_constr_spine_front_d64_w2_c8_matcher :: Term
-match_benchmark_constr_spine_front_d64_w2_c8_matcher =
-  match_benchmark_constr_spine_front_d64_w2_c8_nested
 
 -- Match: Constr n [Constr (n+1) [...], _/I @] / Constr n [_/I @, Constr (n+1) [...]];
 --        Constr 100 [I @,_]; I @ at n=[1,12,23,...,89,100] => 1005.
@@ -359,10 +319,6 @@ match_benchmark_constr_spine_zigzag_d100_w2_c10_nested =
         patternRoot = go 1 childPositions
      in patternRoot
 
-match_benchmark_constr_spine_zigzag_d100_w2_c10_matcher :: Term
-match_benchmark_constr_spine_zigzag_d100_w2_c10_matcher =
-  match_benchmark_constr_spine_zigzag_d100_w2_c10_nested
-
 -- Match: Constr 1 [Constr 2 [Constr 3 [...],...,Constr 4 [...]],...,
 --        Constr 5 [Constr 6 [...],...,Constr 7 [...]]]; captures I[7,21,...,105,112] => 504.
 match_benchmark_constr_binary_d3_w16_c8_nested :: Term
@@ -387,10 +343,6 @@ match_benchmark_constr_binary_d3_w16_c8_nested =
 
         patternRoot = node1
      in patternRoot
-
-match_benchmark_constr_binary_d3_w16_c8_matcher :: Term
-match_benchmark_constr_binary_d3_w16_c8_matcher =
-  match_benchmark_constr_binary_d3_w16_c8_nested
 
 -- Match: Constr 1 [Constr 2 [_,_,Constr 3 [...],_,_,Constr 66 [...],_,_],
 --        _,_,_,_,_,_,Constr 129 [...]]; leaf tags [8,15,...,244,251] have f3=I @ => 33024.
@@ -452,10 +404,6 @@ match_benchmark_constr_binary_stress_d8_w8_c32_nested =
         patternRoot = go 1 8 1
      in patternRoot
 
-match_benchmark_constr_binary_stress_d8_w8_c32_matcher :: Term
-match_benchmark_constr_binary_stress_d8_w8_c32_matcher =
-  match_benchmark_constr_binary_stress_d8_w8_c32_nested
-
 -- Match: Constr 1 [Constr 2 [Constr 3 [...],...,Constr 4 [...],...,Constr 5 [...]],...,
 --        Constr 6 [Constr 7 [...],...,Constr 8 [...],...,Constr 9 [...]],...,Constr 10 [...]];
 --        captures I[4,18,...,94,104] => 556.
@@ -487,10 +435,6 @@ match_benchmark_constr_ternary_d3_w8_c10_nested =
 
         patternRoot = node1
      in patternRoot
-
-match_benchmark_constr_ternary_d3_w8_c10_matcher :: Term
-match_benchmark_constr_ternary_d3_w8_c10_matcher =
-  match_benchmark_constr_ternary_d3_w8_c10_nested
 
 -- Match: Constr 1 [Constr 2 [...],I @,Constr 7 [...],_,_,
 --        Constr 12 [...],_,Constr 17 [...]];
@@ -532,10 +476,6 @@ match_benchmark_constr_quaternary_d3_w8_c17_nested =
         patternRoot = node1
      in patternRoot
 
-match_benchmark_constr_quaternary_d3_w8_c17_matcher :: Term
-match_benchmark_constr_quaternary_d3_w8_c17_matcher =
-  match_benchmark_constr_quaternary_d3_w8_c17_nested
-
 -- Match: Constr 1 [I @,_,Constr 2 [Constr 3 [...Constr 4 [...Constr 5
 --        [...Constr 6 [...]]]]],...,Constr 7 [...Constr 8 [...Constr 9 [...]]],_];
 --        captures I[1,14,27,40,54,71,74,108] => 389.
@@ -563,10 +503,6 @@ match_benchmark_constr_rootfork2_d6_w12_c8_nested =
 
         patternRoot = node1
      in patternRoot
-
-match_benchmark_constr_rootfork2_d6_w12_c8_matcher :: Term
-match_benchmark_constr_rootfork2_d6_w12_c8_matcher =
-  match_benchmark_constr_rootfork2_d6_w12_c8_nested
 
 -- Match: Constr 1 [Constr 2 [...Constr 3 [...Constr 4 [...Constr 5 [...]]]],...,
 --        Constr 6 [...Constr 7 [...Constr 8 [...]]],...,Constr 9 [...Constr 10 [...]]];
@@ -597,10 +533,6 @@ match_benchmark_constr_rootfork3_d5_w10_c9_nested =
         patternRoot = node1
      in patternRoot
 
-match_benchmark_constr_rootfork3_d5_w10_c9_matcher :: Term
-match_benchmark_constr_rootfork3_d5_w10_c9_matcher =
-  match_benchmark_constr_rootfork3_d5_w10_c9_nested
-
 -- Match: Constr 1 [Constr 2 [...Constr 3 [...Constr 4 [...]]],_,
 --        Constr 5 [...Constr 6 [...]],...,Constr 7 [...],_,Constr 8 [...]];
 --        captures I[4,9,21,32,35,47,51,62] => 261.
@@ -628,10 +560,6 @@ match_benchmark_constr_rootfork4_d4_w8_c8_nested =
         patternRoot = node1
      in patternRoot
 
-match_benchmark_constr_rootfork4_d4_w8_c8_matcher :: Term
-match_benchmark_constr_rootfork4_d4_w8_c8_matcher =
-  match_benchmark_constr_rootfork4_d4_w8_c8_nested
-
 -- Match: Constr 1 [Constr 2 [...Constr 3 [...Constr 4 [...Constr 5
 --        [...Constr 6 [...Constr 7 [...Constr 8 [...Constr 9 [...Constr 10 [...]]]]]]]]],...];
 --        f16/f82=I @ => 10000.
@@ -658,10 +586,6 @@ match_benchmark_constr_spine_stress_d10_w100_c20_nested =
 
         patternRoot = go 1 childPositions
      in patternRoot
-
-match_benchmark_constr_spine_stress_d10_w100_c20_matcher :: Term
-match_benchmark_constr_spine_stress_d10_w100_c20_matcher =
-  match_benchmark_constr_spine_stress_d10_w100_c20_nested
 
 -- Match: {Constr 1 [...,Constr 9 [...,Constr 10 [...],...,B @]]
 --        | Constr 1 [...,Constr 9 [...,Constr 10 [...],...,I @]]}; => 469.
@@ -701,10 +625,6 @@ match_benchmark_constr_alt_rootfork3_d5_w10_c9_nested =
         node8 = patternNode finalCapture 8 []
         node9 = patternNode finalCapture 9 [(5, node10)]
         node10 = patternNode finalCapture 10 []
-
-match_benchmark_constr_alt_rootfork3_d5_w10_c9_matcher :: Term
-match_benchmark_constr_alt_rootfork3_d5_w10_c9_matcher =
-  match_benchmark_constr_alt_rootfork3_d5_w10_c9_nested
 
 -- Match: {Constr 1 [...,Constr 129 [...,B @]]
 --        | Constr 1 [...,Constr 129 [...,I @]]}; => 33024.
@@ -780,10 +700,6 @@ match_benchmark_constr_alt_binary_d8_w8_c32_nested =
                   )
                 ]
 
-match_benchmark_constr_alt_binary_d8_w8_c32_matcher :: Term
-match_benchmark_constr_alt_binary_d8_w8_c32_matcher =
-  match_benchmark_constr_alt_binary_d8_w8_c32_nested
-
 -- Match: {Constr 1 [Constr 2 [...],_,_,_,_,_,_,B @]
 --        | Constr 1 [Constr 2 [...],_,_,_,_,_,_,I @]}; => 544.
 match_benchmark_constr_alt_spine_d16_w8_c8_nested :: Term
@@ -816,7 +732,3 @@ match_benchmark_constr_alt_spine_d16_w8_c8_nested =
           childPosition : laterPositions ->
             [(childPosition, go finalCapture (nodeId + 1) laterPositions)]
           [] -> []
-
-match_benchmark_constr_alt_spine_d16_w8_c8_matcher :: Term
-match_benchmark_constr_alt_spine_d16_w8_c8_matcher =
-  match_benchmark_constr_alt_spine_d16_w8_c8_nested
