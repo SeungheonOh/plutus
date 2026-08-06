@@ -22,6 +22,8 @@ type Term = UPLC.Term PLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
 matching_implementation :: String
 matching_implementation = "nested"
 
+type NamedTerm = UPLC.Term UPLC.Name PLC.DefaultUni PLC.DefaultFun ()
+
 debruijnTermUnsafe
   :: UPLC.Term UPLC.Name uni fun ann
   -> UPLC.Term UPLC.NamedDeBruijn uni fun ann
@@ -56,6 +58,19 @@ nestedMatcher :: Int -> DefaultBuiltinPattern -> Term
 nestedMatcher captureCount patternRoot =
   nestedAlternativesMatcher [(patternRoot, captureCount)]
 
+sumCapturedIntegers :: [UPLC.Name] -> NamedTerm
+sumCapturedIntegers [] = mkConstant @Integer () 0
+sumCapturedIntegers (firstCapture : laterCaptures) =
+  foldl'
+    ( \acc capture ->
+        UPLC.Apply
+          ()
+          (UPLC.Apply () (UPLC.Builtin () PLC.AddInteger) acc)
+          (UPLC.Var () capture)
+    )
+    (UPLC.Var () firstCapture)
+    laterCaptures
+
 nestedAlternativesMatcher :: [(DefaultBuiltinPattern, Int)] -> Term
 nestedAlternativesMatcher alternatives =
   debruijnTermUnsafe $ runQuote $ do
@@ -64,17 +79,11 @@ nestedAlternativesMatcher alternatives =
       traverse
         ( \(patternRoot, captureCount) -> do
             captures <- replicateM captureCount $ freshName "capture"
-            let total =
-                  foldl'
-                    ( \acc capture ->
-                        UPLC.Apply
-                          ()
-                          (UPLC.Apply () (UPLC.Builtin () PLC.AddInteger) acc)
-                          (UPLC.Var () capture)
-                    )
-                    (mkConstant @Integer () 0)
+            let handler =
+                  foldr
+                    (UPLC.LamAbs ())
+                    (sumCapturedIntegers captures)
                     captures
-                handler = foldr (UPLC.LamAbs ()) total captures
             pure (patternRoot, handler)
         )
         alternatives
@@ -654,111 +663,117 @@ match_benchmark_constr_spine_stress_d10_w100_c20_matcher :: Term
 match_benchmark_constr_spine_stress_d10_w100_c20_matcher =
   match_benchmark_constr_spine_stress_d10_w100_c20_nested
 
--- Match: {Constr 1 [Constr 2 [...], ..., Constr 9 [... Constr 999 [...,I @,...]]]
---        | Constr 1 [Constr 2 [...], ..., Constr 9 [... Constr 10 [...,I @,...]]]}; => 469.
+-- Match: {Constr 1 [...,Constr 9 [...,Constr 10 [...],...,B @]]
+--        | Constr 1 [...,Constr 9 [...,Constr 10 [...],...,I @]]}; => 469.
 match_benchmark_constr_alt_rootfork3_d5_w10_c9_nested :: Term
 match_benchmark_constr_alt_rootfork3_d5_w10_c9_nested =
   nestedAlternativesMatcher
-    [ (patternRoot 999, 9)
-    , (patternRoot 10, 9)
+    [ (patternRoot $ DefaultPatternDataB DefaultPatternCapture, 9)
+    , (patternRoot $ DefaultPatternDataI DefaultPatternCapture, 9)
     ]
   where
     captureValues :: [Integer]
-    captureValues = [5, 11, 27, 50, 52, 68, 74, 83, 99]
+    captureValues = [11, 14, 27, 50, 52, 68, 74, 83, 90]
 
-    scalarPattern :: Int -> Int -> DefaultBuiltinPattern
-    scalarPattern nodeId fieldIndex =
-      capturedIntegerPattern $ toInteger ((nodeId - 1) * 10 + fieldIndex + 1) `elem` captureValues
+    scalarPattern :: DefaultBuiltinPattern -> Int -> Int -> DefaultBuiltinPattern
+    scalarPattern finalCapture nodeId fieldIndex
+      | nodeId == 9 && fieldIndex == 9 = finalCapture
+      | otherwise =
+          capturedIntegerPattern $
+            toInteger ((nodeId - 1) * 10 + fieldIndex + 1) `elem` captureValues
 
-    patternNode finalLeafTag nodeId =
+    patternNode finalCapture nodeId =
       constrNode
         10
-        (if nodeId == 10 then finalLeafTag else nodeId)
-        (scalarPattern nodeId)
+        nodeId
+        (scalarPattern finalCapture nodeId)
 
-    patternRoot :: Int -> DefaultBuiltinPattern
-    patternRoot finalLeafTag = node1
+    patternRoot :: DefaultBuiltinPattern -> DefaultBuiltinPattern
+    patternRoot finalCapture = node1
       where
-        node1 = patternNode finalLeafTag 1 [(0, node2), (5, node6), (9, node9)]
-        node2 = patternNode finalLeafTag 2 [(2, node3)]
-        node3 = patternNode finalLeafTag 3 [(8, node4)]
-        node4 = patternNode finalLeafTag 4 [(4, node5)]
-        node5 = patternNode finalLeafTag 5 []
-        node6 = patternNode finalLeafTag 6 [(7, node7)]
-        node7 = patternNode finalLeafTag 7 [(1, node8)]
-        node8 = patternNode finalLeafTag 8 []
-        node9 = patternNode finalLeafTag 9 [(5, node10)]
-        node10 = patternNode finalLeafTag 10 []
+        node1 = patternNode finalCapture 1 [(0, node2), (5, node6), (9, node9)]
+        node2 = patternNode finalCapture 2 [(2, node3)]
+        node3 = patternNode finalCapture 3 [(8, node4)]
+        node4 = patternNode finalCapture 4 [(4, node5)]
+        node5 = patternNode finalCapture 5 []
+        node6 = patternNode finalCapture 6 [(7, node7)]
+        node7 = patternNode finalCapture 7 [(1, node8)]
+        node8 = patternNode finalCapture 8 []
+        node9 = patternNode finalCapture 9 [(5, node10)]
+        node10 = patternNode finalCapture 10 []
 
 match_benchmark_constr_alt_rootfork3_d5_w10_c9_matcher :: Term
 match_benchmark_constr_alt_rootfork3_d5_w10_c9_matcher =
   match_benchmark_constr_alt_rootfork3_d5_w10_c9_nested
 
--- Match: {Constr 1 [Constr 2 [...],...,Constr 129 [... Constr 253 [...,Constr 999 [...]]]]
---        | Constr 1 [Constr 2 [...],...,Constr 129 [... Constr 253 [...,Constr 255 [...]]]]}; => 33024.
+-- Match: {Constr 1 [...,Constr 129 [...,B @]]
+--        | Constr 1 [...,Constr 129 [...,I @]]}; => 33024.
 match_benchmark_constr_alt_binary_d8_w8_c32_nested :: Term
 match_benchmark_constr_alt_binary_d8_w8_c32_nested =
   nestedAlternativesMatcher
-    [ (go 999 1 8 1, 32)
-    , (go 255 1 8 1, 32)
+    [ (go (DefaultPatternDataB DefaultPatternCapture) 1 8 1, 32)
+    , (go (DefaultPatternDataI DefaultPatternCapture) 1 8 1, 32)
     ]
   where
-    captureNodeIds :: [Int]
-    captureNodeIds =
-      [ 8
-      , 15
-      , 23
-      , 30
-      , 39
-      , 46
-      , 54
-      , 61
-      , 71
-      , 78
-      , 86
-      , 93
-      , 102
-      , 109
-      , 117
-      , 124
-      , 135
-      , 142
-      , 150
-      , 157
-      , 166
-      , 173
-      , 181
-      , 188
-      , 198
-      , 205
-      , 213
-      , 220
-      , 229
+    captureValues :: [Integer]
+    captureValues =
+      [ 60
+      , 116
+      , 180
       , 236
-      , 244
-      , 251
+      , 308
+      , 364
+      , 428
+      , 484
+      , 564
+      , 620
+      , 684
+      , 740
+      , 812
+      , 868
+      , 932
+      , 1032
+      , 1076
+      , 1132
+      , 1196
+      , 1252
+      , 1324
+      , 1380
+      , 1444
+      , 1500
+      , 1580
+      , 1636
+      , 1700
+      , 1756
+      , 1828
+      , 1884
+      , 1948
+      , 1960
       ]
 
-    scalarPattern :: Int -> Int -> DefaultBuiltinPattern
-    scalarPattern nodeId fieldIndex =
-      capturedIntegerPattern $ nodeId `elem` captureNodeIds && fieldIndex == 3
+    scalarPattern :: DefaultBuiltinPattern -> Int -> Int -> DefaultBuiltinPattern
+    scalarPattern finalCapture nodeId fieldIndex
+      | nodeId == 129 && fieldIndex == 7 = finalCapture
+      | otherwise =
+          capturedIntegerPattern $
+            toInteger ((nodeId - 1) * 8 + fieldIndex + 1) `elem` captureValues
 
-    go :: Int -> Int -> Int -> Int -> DefaultBuiltinPattern
-    go finalLeafTag level height nodeId =
+    go :: DefaultBuiltinPattern -> Int -> Int -> Int -> DefaultBuiltinPattern
+    go finalCapture level height nodeId =
       constrNode
         8
-        (if nodeId == 255 then finalLeafTag else nodeId)
-        (scalarPattern nodeId)
+        nodeId
+        (scalarPattern finalCapture nodeId)
         $ if height == 1
           then []
           else
             let (leftField, rightField) =
                   if odd level then (0, 7) else (2, 5)
-             in [ (leftField, go finalLeafTag (level + 1) (height - 1) (nodeId + 1))
+             in [ (leftField, go finalCapture (level + 1) (height - 1) (nodeId + 1))
                 ,
                   ( rightField
                   , go
-                      finalLeafTag
+                      finalCapture
                       (level + 1)
                       (height - 1)
                       (nodeId + 2 ^ (height - 1))
@@ -769,34 +784,37 @@ match_benchmark_constr_alt_binary_d8_w8_c32_matcher :: Term
 match_benchmark_constr_alt_binary_d8_w8_c32_matcher =
   match_benchmark_constr_alt_binary_d8_w8_c32_nested
 
--- Match: {Constr 1 [Constr 2 [... Constr 999 [_,_,_,I @,...] ...],...]
---        | Constr 1 [Constr 2 [... Constr 16 [_,_,_,I @,...] ...],...]}; => 544.
+-- Match: {Constr 1 [Constr 2 [...],_,_,_,_,_,_,B @]
+--        | Constr 1 [Constr 2 [...],_,_,_,_,_,_,I @]}; => 544.
 match_benchmark_constr_alt_spine_d16_w8_c8_nested :: Term
 match_benchmark_constr_alt_spine_d16_w8_c8_nested =
   nestedAlternativesMatcher
-    [ (go 999 1 childPositions, 8)
-    , (go 16 1 childPositions, 8)
+    [ (go (DefaultPatternDataB DefaultPatternCapture) 1 childPositions, 8)
+    , (go (DefaultPatternDataI DefaultPatternCapture) 1 childPositions, 8)
     ]
   where
     captureValues :: [Integer]
-    captureValues = [12, 28, 44, 60, 76, 92, 108, 124]
+    captureValues = [8, 28, 44, 60, 76, 92, 108, 128]
 
     childPositions :: [Int]
     childPositions = [0, 7, 2, 5, 0, 7, 2, 5, 0, 7, 2, 5, 0, 7, 2]
 
-    scalarPattern :: Int -> Int -> DefaultBuiltinPattern
-    scalarPattern nodeId fieldIndex =
-      capturedIntegerPattern $ toInteger ((nodeId - 1) * 8 + fieldIndex + 1) `elem` captureValues
+    scalarPattern :: DefaultBuiltinPattern -> Int -> Int -> DefaultBuiltinPattern
+    scalarPattern finalCapture nodeId fieldIndex
+      | nodeId == 1 && fieldIndex == 7 = finalCapture
+      | otherwise =
+          capturedIntegerPattern $
+            toInteger ((nodeId - 1) * 8 + fieldIndex + 1) `elem` captureValues
 
-    go :: Int -> Int -> [Int] -> DefaultBuiltinPattern
-    go finalLeafTag nodeId remainingPositions =
+    go :: DefaultBuiltinPattern -> Int -> [Int] -> DefaultBuiltinPattern
+    go finalCapture nodeId remainingPositions =
       constrNode
         8
-        (if nodeId == 16 then finalLeafTag else nodeId)
-        (scalarPattern nodeId)
+        nodeId
+        (scalarPattern finalCapture nodeId)
         $ case remainingPositions of
           childPosition : laterPositions ->
-            [(childPosition, go finalLeafTag (nodeId + 1) laterPositions)]
+            [(childPosition, go finalCapture (nodeId + 1) laterPositions)]
           [] -> []
 
 match_benchmark_constr_alt_spine_d16_w8_c8_matcher :: Term
